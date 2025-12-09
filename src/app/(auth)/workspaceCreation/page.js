@@ -7,7 +7,7 @@ import AUTH from "../../axios/auth";
 import WORKSPACE from "../../axios/workspace";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
-import {COMPANY_TYPES, INDUSTRIES, EMPLOYEE_RANGES, workflowTypes, integrationOptions } from "./content"
+import {COMPANY_TYPES, INDUSTRIES, EMPLOYEE_RANGES, workflowTypes, } from "./content"
 import { step1Schema, step2Schema, step3Schema, step4Schema } from "../../formValidationScheme/authSchema";
 import { useUserStore, useWorkspaceStore } from "../../store";
 import {
@@ -24,6 +24,7 @@ import {
   FiTrendingUp,
   FiLayers,
   FiShield,
+  FiUser,
   FiZap
 } from "react-icons/fi";
 
@@ -257,7 +258,7 @@ const handleFormData = async () => {
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FaBuilding className="h-5 w-5 text-gray-400" />
+                      <FiUser className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
                       type="text"
@@ -266,7 +267,7 @@ const handleFormData = async () => {
                       value={formData.userName}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                      placeholder="Enter company name"
+                      placeholder="Enter your name"
                       required
                     />
                   </div>

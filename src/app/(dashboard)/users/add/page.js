@@ -303,7 +303,7 @@ export default function AddUserPage() {
                     ))}
                   </div>
                 </div>
-                <div className="text-red-500 text-sm mt-2">{permissionError}</div>
+                <div className="text-red-500 text-sm ml-6 pb-4">{permissionError}</div>
               </div>}
 
             {/* Submit Button */}
@@ -331,7 +331,7 @@ export default function AddUserPage() {
 
           {/* Right Column - Role Info */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm sticky top-24">
+            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm top-24">
               <div className="px-6 py-4 border-b border-amber-100">
                 <h2 className="text-lg font-semibold text-gray-900">Role Information</h2>
               </div>
@@ -409,7 +409,7 @@ export default function AddUserPage() {
                   </div>
                   <div className="pt-4 border-t border-gray-200">
                     <Link
-                      href="/dashboard/users"
+                      href="#"
                       className="block text-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
                     >
                       View All Members

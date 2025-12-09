@@ -188,11 +188,11 @@ export default function DashboardLayout({ children }) {
                   <h1 className="text-xl font-semibold text-gray-900">
                     {workspace?.companyName || "Company Workspace"}
                   </h1>
-                  <p className="text-sm text-gray-500">Welcome back, {(user?.name)?.toUpperCase()}</p>
+                  <p className="text-sm text-gray-500">Welcome, {user?.name}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                <button className="p-2 text-gray-400 hover:text-gray-500 relative">
+                <button className="cursor-not-allowed p-2 text-gray-400 hover:text-gray-500 relative">
                   <FiBell className="h-6 w-6" />
                   <span className="absolute top-1 right-1 h-2 w-2 bg-amber-500 rounded-full"></span>
                 </button>
@@ -220,15 +220,15 @@ export default function DashboardLayout({ children }) {
                   {userMenuOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                       <a
-                        href="/profile"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        href="#"
+                        className="cursor-not-allowed flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Your Profile
                       </a>
                       <a
-                        href="/settings"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        href="#"
+                        className="cursor-not-allowed flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <FiSettings className="mr-3 h-4 w-4" />
                         Settings
@@ -236,7 +236,7 @@ export default function DashboardLayout({ children }) {
                       <div className="border-t border-gray-100"></div>
                       <p
                         onClick={signout}
-                        className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        className="cursor-pointer flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
                         <FiLogOut className="mr-3 h-4 w-4" />
                         Sign out
