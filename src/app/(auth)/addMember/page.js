@@ -1,11 +1,9 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
+import { use, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { signupSchema } from "../../formValidationScheme/authSchema";
+import { addMemberSchema } from "../../formValidationScheme/authSchema";
 
 import {
   FiEye,
@@ -15,6 +13,7 @@ import {
   FiShield,
   FiArrowLeft,
   FiUsers,
+  FiUser,
   FiLayers,
   FiZap,
   FiBriefcase,
@@ -23,47 +22,95 @@ import {
   FiUserPlus,
   FiGlobe
 } from "react-icons/fi";
-import AUTH from "../../axios/auth";
 import toast, { Toaster } from 'react-hot-toast';
+import WORKSPACE from "../../axios/workspace";
+import USER from "../../axios/user";
+import FullScreenLoader from "../../(component)/FullScreenLoader";
 
 
 export default function SignupPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [screenLoader, setScreenLoader] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const token = useSearchParams().get("token");
   const router = useRouter();
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    setValue,
+    formState: { errors },
   } = useForm({
-    resolver: yupResolver(signupSchema)
+    resolver: yupResolver(addMemberSchema)
   });
-  const handleSignup = async (formData) => {
-    const { email, password } = formData;
-    setLoading(true);
-    const { error } = await AUTH.sendVerificationEmail({ email, password });
-
-    if (error) {
-      toast.error("Email already in use. Try another one.", {
-        duration: 4000,
-        position: 'top-right',
-      });
-    } else {
-       const data = { email, password };
-      sessionStorage.setItem("userData", JSON.stringify(data));
-      router.push(`/emailVerfication`);
+    // functionality start here-----------
+  useEffect(() => {
+    const fetchTokenData = async () => {
+      setScreenLoader(true)
+      const { error, data } = await WORKSPACE.verifyAddMemberToken({token})
+      if (error) {
+        toast.error("Your token has been expired please try again");
+        router.push('/signup');
+        setScreenLoader(false)
+        return
+      }
+      setUserData(data)
+      setValue("email",data.userData.memberEmail)
+      setScreenLoader(false)  
+  
     }
-    setLoading(false);
-  };
+    fetchTokenData()
+  }, [token])
+
+  const HandleIfUserNotExist = async (formData) => { 
+
+    const { email, password, userName } = formData;
+    const userPayload = {email,password,name:userName,isEmailVerified:true} 
+    const {data:newUserData} = await USER.createUser(userPayload)
+    const payload = {
+    workspaceId:userData.userData?.workspaceId,
+    memberId: newUserData._id,
+    memberEmail: userData.userData?.memberEmail,
+    permissions: userData.userData?.permissions,
+    customMessage: userData.userData?.customMessage,
+    role: userData.userData?.role
+  }
+  const {error} = await WORKSPACE.addMemberInWorkspace(payload)
+  if(error) {
+    toast.error("You  are already a member of this workspace!");
+     setLoading(false);
+    router.push('/login');
+};
+  toast.success("Now you are the member this workspace!");
+  setLoading(false);
+  router.push('/login');
+};
+
+
+const handleIfUserExist = async () => {
+  setLoading(true);
+  const payload = {
+    workspaceId:userData.userData?.workspaceId,
+    memberId: userData.userData?._id,
+    memberEmail: userData.userData?.memberEmail,
+    permissions: userData.userData?.permissions,
+    customMessage: userData.userData?.customMessage,
+    role: userData.userData?.role
+  }
+  await WORKSPACE.addMemberInWorkspace(payload)
+  toast.success("Now you are the member this workspace!");
+  setLoading(false);
+  router.push('/login');
+};
+ 
 
   return (
+    <React.Fragment>
+      <FullScreenLoader loading={screenLoader}/>
     <div className="min-h-screen flex bg-white">
-      <Toaster position="top-center" reverseOrder={false} />
+      <Toaster position="top-right" duration={6000} />
       {/* Left Side - Signup Form */}
       <div className="flex-1 flex flex-col justify-start pt-12 px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
@@ -90,33 +137,49 @@ export default function SignupPage() {
               <div className="bg-amber-100 p-2 rounded-lg">
                 <FiUserPlus className="h-6 w-6 text-amber-600" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
+              <h2 className="text-3xl font-bold text-gray-900">Add Workspace</h2>
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              Start your enterprise workflow management journey
+              Be a member of workspace and start your journey
             </p>
           </div>
-
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit(handleSignup)}>
+{!userData?.userExists &&
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(HandleIfUserNotExist)}>
             <div>
               <label
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Company Email Address
+                Enter Your Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiUser  className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  {...register("userName")}
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  placeholder="John Doe"
+                />
+              </div>
+              <p className="text-red-500 text-sm mt-2">{errors.userName?.message}</p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Your Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FiMail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                 disabled
                   {...register("email")}
                   autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="company@example.com"
                 />
@@ -135,14 +198,9 @@ export default function SignupPage() {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FiLock className="h-5 w-5 text-gray-400" />
                 </div>
-                <input
-                  id="password"
-                  name="password"
+                <input              
                   {...register("password")}
                   type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="Minimum 8 characters"
                 />
@@ -176,13 +234,8 @@ export default function SignupPage() {
                   <FiLock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="confirmPassword"
-                  name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   {...register("confirmPassword")}
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="Re-enter your password"
                 />
@@ -250,20 +303,12 @@ export default function SignupPage() {
                     Creating Account...
                   </>
                 ) : (
-                  "Create Workspace"
+                  "Join Workspace"
                 )}
               </button>
             </div>
 
-            <div className="text-center">
-              <p className="text-xs text-gray-500">
-                Already have an account?{" "}
-                <Link href="/login" className="font-medium text-amber-600 hover:text-amber-500">
-                  Sign in to your workspace
-                </Link>
-              </p>
-            </div>
-
+            
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
@@ -284,9 +329,32 @@ export default function SignupPage() {
               </button>
             </div>
           </form>
+          }
+
+       {userData?.userExists &&
+        <div>
+              <button
+                // type="submit"
+                onClick={handleIfUserExist}
+                disabled={loading}
+                className="group mt-4 relative w-full hover:cursor-pointer flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  "Join Workspace"
+                )}
+              </button>
+            </div>
+       
+       }
+
         </div>
       </div>
-
+              
       {/* Right Side - Platform Benefits Section */}
       <div className="hidden lg:flex flex-1 bg-linear-to-br from-amber-50 to-amber-100">
         <div className="flex flex-col items-center justify-center w-full p-6">
@@ -374,5 +442,6 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    </React.Fragment>
   );
 }

@@ -1,6 +1,15 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FaBuilding } from "react-icons/fa";
+import { toast, Toaster } from "react-hot-toast";
+import AUTH from "../../axios/auth";
+import WORKSPACE from "../../axios/workspace";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useForm } from "react-hook-form";
+import {COMPANY_TYPES, INDUSTRIES, EMPLOYEE_RANGES, workflowTypes, integrationOptions } from "./content"
+import { step1Schema, step2Schema, step3Schema, step4Schema } from "../../formValidationScheme/authSchema";
+import { useUserStore, useWorkspaceStore } from "../../store";
 import {
   FiBriefcase,
   FiGlobe,
@@ -17,247 +26,167 @@ import {
   FiShield,
   FiZap
 } from "react-icons/fi";
-import { FaBuilding } from "react-icons/fa";
-import { toast, Toaster } from "react-hot-toast";
-
-// Company types for dropdown
-const COMPANY_TYPES = [
-  "Technology",
-  "Healthcare",
-  "Finance",
-  "Manufacturing",
-  "Retail",
-  "Education",
-  "Consulting",
-  "Legal",
-  "Marketing",
-  "Real Estate",
-  "Non-Profit",
-  "Government",
-  "Other"
-];
-
-// Industry sectors
-const INDUSTRIES = [
-  "Software & IT",
-  "Healthcare Services",
-  "Financial Services",
-  "Manufacturing",
-  "Retail & E-commerce",
-  "Education & Training",
-  "Professional Services",
-  "Construction",
-  "Transportation & Logistics",
-  "Hospitality",
-  "Media & Entertainment",
-  "Telecommunications",
-  "Energy & Utilities",
-  "Agriculture",
-  "Other"
-];
-
-// Employee size ranges
-const EMPLOYEE_RANGES = [
-  "1-10",
-  "11-50",
-  "51-200",
-  "201-500",
-  "501-1000",
-  "1001-5000",
-  "5000+"
-];
 
 export default function CompanySetupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [workflowError,setWorkflowError] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
+  const {setUser} = useUserStore()
+  const {setWorkspace} = useWorkspaceStore()
+  const token = useSearchParams().get("token");
+  const schemas = {
+    1: step1Schema,
+    2: step2Schema,
+    3: step3Schema,
+    4: step4Schema
+  }
   const totalSteps = 4;
-
-  // Form state
-  const [formData, setFormData] = useState({
-    // Step 1: Basic Info
-    companyName: "",
-    companyType: "",
-    industry: "",
-    companyEmail: "",
-    phoneNumber: "",
-    website: "",
-    foundedYear: "",
-    
-    // Step 2: Company Details
-    employeeCount: "",
-    headquarters: "",
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    currency: "USD",
-    taxId: "",
-    registrationNumber: "",
-    
-    // Step 3: Workflow Preferences
-    primaryWorkflowTypes: [],
-    expectedWorkflows: "",
-    automationPriority: "medium",
-    integrationNeeds: [],
-    complianceRequired: false,
-    
-    // Step 4: Team Setup
-    initialTeamSize: "1",
-    adminEmail: "",
-    notificationPreferences: {
+  const {
+    register,
+    handleSubmit,
+    trigger,
+    getValues,
+    watch,
+    setValue,
+    formState: { errors }
+  } = useForm({
+    resolver: yupResolver(schemas[currentStep]),
+    defaultValues:{
+      primaryWorkflowTypes:[],
+      automationPriority:"medium",
+      foundedYear:"",
+      expectedWorkflows:"",
+      notificationPreferences: {
       email: true,
       slack: false,
       teams: false,
       inApp: true
     }
+    }
   });
+  const formData =  getValues();
 
-  // Workflow type options
-  const workflowTypes = [
-    "Onboarding",
-    "Offboarding",
-    "Approval Processes",
-    "HR Requests",
-    "Project Management",
-    "Sales Processes",
-    "Customer Support",
-    "Compliance & Audits",
-    "Content Creation",
-    "Quality Assurance",
-    "Procurement",
-    "Incident Management"
-  ];
+  // functionality start here-----------
+  useEffect(() => {
+    const fetchTokenData = async () => {
+      const { error, data } = await AUTH.verifyToken(token)
+      if (error) {
+        toast.error("Your token has been expired please try again");
+        router.push('/signup');
+      }
+      if (data) {
+        const { password, email } = data.payload.sub
+        setPassword(password)
+        setValue("companyEmail",email)
+        setValue("adminEmail",email)
+      }
+    }
+    fetchTokenData()
+  }, [token])
 
-  // Integration options
-  const integrationOptions = [
-    "Slack",
-    "Microsoft Teams",
-    "Google Workspace",
-    "Microsoft 365",
-    "Salesforce",
-    "Jira",
-    "Trello",
-    "Asana",
-    "Zoom",
-    "QuickBooks",
-    "Zapier",
-    "Custom API"
-  ];
+const handleInputChange = (e) => {
+  const { name, value, type } = e.target;
+  if (type === "radio") {
+    setValue(name, value, { shouldValidate: true, shouldDirty: true });
+  } else {
+    setValue(name, value, { shouldValidate: true, shouldDirty: true });
+  }
+};
 
-  const handleInputChange = (e) => {
-    const { name, value, type } = e.target;
-    
-    if (type === "checkbox") {
-      const checked = e.target.checked;
-      setFormData(prev => ({
-        ...prev,
-        [name]: checked
-      }));
+
+const handleArrayChange = (arrayName, value) => {
+ setWorkflowError("")
+  const currentArray = watch(arrayName) || [];
+
+  const updatedArray = currentArray.includes(value)
+    ? currentArray.filter(item => item !== value) 
+    : [...currentArray, value]; 
+  setValue(arrayName, updatedArray, { shouldValidate: true, shouldDirty: true });
+};
+
+const handleNotificationChange = (channel) => {
+  const currentPrefs = watch("notificationPreferences") || {};
+  const updatedPrefs = {
+    ...currentPrefs,
+    [channel]: !currentPrefs[channel],
+  };
+  setValue("notificationPreferences", updatedPrefs, {
+    shouldValidate: true,
+    shouldDirty: true,
+  });
+  setLoading(false);
+};
+
+const handleFormData = async () => {
+  const isStepValid = await trigger();
+  setWorkflowError("")
+
+  if (isStepValid) {
+    if(currentStep === 3 && formData.primaryWorkflowTypes.length === 0){
+      setWorkflowError("Please select at least one workflow type");
+      return
+    }
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      handleSubmit(async (formData) => {
+        try {
+          setLoading(true); 
+
+          const userPayload = {
+            name: formData.userName,
+            email: formData.companyEmail,
+            password: password, 
+            isEmailVerified: true,
+          };
+
+          // Create user
+          const { data, error } = await AUTH.createUser(userPayload);
+
+          if (error) {
+            setLoading(false);
+            toast.error("Email already in use. Try another one.");
+            router.push("/signup");
+            return;
+          }
+          localStorage.setItem("accessToken", data.tokens.access.token);
+          localStorage.setItem("refreshToken", data.tokens.refresh.token);
+
+          const { data: workspaceData, error: workspaceError } =
+            await WORKSPACE.createWorkspace({
+              ...formData,
+              adminId: data.user._id,
+            });
+
+          if (workspaceError) {
+            setLoading(false);
+            toast.error("Something went wrong! Please try again.");
+            router.push("/signup");
+            return;
+          }
+          setUser(data.user)
+          setWorkspace(workspaceData.workspace)
+          setLoading(false); 
+          router.push("/dashboard");
+        } catch (err) {
+          setLoading(false);
+          toast.error("Unexpected error occurred.");
+          console.error(err);
+        }
+      })();
     }
-  };
+  }
+};
 
-  const handleArrayChange = (arrayName, value) => {
-    setFormData(prev => {
-      const currentArray = prev[arrayName];
-      const updatedArray = currentArray.includes(value)
-        ? currentArray.filter(item => item !== value)
-        : [...currentArray, value];
-      
-      return {
-        ...prev,
-        [arrayName]: updatedArray
-      };
-    });
-  };
 
-  const handleNotificationChange = (channel) => {
-    setFormData(prev => ({
-      ...prev,
-      notificationPreferences: {
-        ...prev.notificationPreferences,
-        [channel]: !prev.notificationPreferences[channel]
-      }
-    }));
-  };
-
-  const validateStep = (step) => {
-    switch (step) {
-      case 1:
-        if (!formData.companyName || !formData.companyType || !formData.industry) {
-          toast.error("Please fill in all required fields");
-          return false;
-        }
-        return true;
-      case 2:
-        if (!formData.employeeCount || !formData.headquarters) {
-          toast.error("Please fill in all required fields");
-          return false;
-        }
-        return true;
-      case 3:
-        if (formData.primaryWorkflowTypes.length === 0) {
-          toast.error("Please select at least one workflow type");
-          return false;
-        }
-        return true;
-      case 4:
-        if (!formData.adminEmail) {
-          toast.error("Please provide an admin email");
-          return false;
-        }
-        return true;
-      default:
-        return true;
-    }
-  };
-
-  const handleNextStep = () => {
-    if (validateStep(currentStep)) {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        handleSubmit();
-      }
-    }
-  };
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!validateStep(4)) return;
-    
-    setLoading(true);
-    
-    // Simulate API call to save company data
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Here you would typically:
-      // 1. Save company data to your backend (MongoDB)
-      // 2. Create the initial admin user
-      // 3. Set up the workspace
-      // 4. Initialize default workflows based on selections
-      
-      toast.success("Company setup completed successfully!");
-      
-      // Redirect to dashboard
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-      
-    } catch (error) {
-      toast.error("Failed to save company data. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -267,8 +196,8 @@ export default function CompanySetupPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-amber-50 to-white">
-      <Toaster position="top-right" />
-      
+      <Toaster duration={4000} position="top-right" />
+
       {/* Header */}
       <header className="bg-white border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -286,11 +215,11 @@ export default function CompanySetupPage() {
               Step {currentStep} of {totalSteps}
             </div>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-linear-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-500"
                 style={{ width: getStepProgress() }}
               ></div>
@@ -322,6 +251,29 @@ export default function CompanySetupPage() {
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Your Name *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FaBuilding className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="userName"
+                      {...register("userName")}
+                      value={formData.userName}
+                      onChange={handleInputChange}
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      placeholder="Enter company name"
+                      required
+                    />
+                  </div>
+               <p className="text-red-500 text-sm mt-2">{errors.userName?.message}</p>
+
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Company Name *
@@ -333,6 +285,7 @@ export default function CompanySetupPage() {
                     <input
                       type="text"
                       name="companyName"
+                      {...register("companyName")}
                       value={formData.companyName}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -340,6 +293,7 @@ export default function CompanySetupPage() {
                       required
                     />
                   </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.companyName?.message}</p>
                 </div>
 
                 <div>
@@ -352,6 +306,7 @@ export default function CompanySetupPage() {
                     </div>
                     <select
                       name="companyType"
+                      {...register("companyType")}
                       value={formData.companyType}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -363,6 +318,7 @@ export default function CompanySetupPage() {
                       ))}
                     </select>
                   </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.companyType?.message}</p>
                 </div>
 
                 <div>
@@ -375,6 +331,7 @@ export default function CompanySetupPage() {
                     </div>
                     <select
                       name="industry"
+                      {...register("industry")}
                       value={formData.industry}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -386,6 +343,7 @@ export default function CompanySetupPage() {
                       ))}
                     </select>
                   </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.industry?.message}</p>
                 </div>
 
                 <div>
@@ -399,13 +357,15 @@ export default function CompanySetupPage() {
                     <input
                       type="email"
                       name="companyEmail"
-                      value={formData.companyEmail}
+                      disabled
+                      value={formData.companyEmail || " "}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       placeholder="contact@company.com"
                       required
                     />
                   </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.companyEmail?.message}</p>
                 </div>
 
                 <div>
@@ -415,11 +375,13 @@ export default function CompanySetupPage() {
                   <input
                     type="tel"
                     name="phoneNumber"
+                    {...register("phoneNumber")}
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                     placeholder="+1 (555) 123-4567"
                   />
+                 <p className="text-red-500 text-sm mt-2">{errors.phoneNumber?.message}</p>
                 </div>
 
                 <div>
@@ -433,12 +395,14 @@ export default function CompanySetupPage() {
                     <input
                       type="url"
                       name="website"
+                      {...register("website")}
                       value={formData.website}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       placeholder="https://company.com"
                     />
                   </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.website?.message}</p>
                 </div>
 
                 <div>
@@ -452,6 +416,7 @@ export default function CompanySetupPage() {
                     <input
                       type="number"
                       name="foundedYear"
+                      {...register("foundedYear")}
                       value={formData.foundedYear}
                       onChange={handleInputChange}
                       min="1800"
@@ -460,6 +425,7 @@ export default function CompanySetupPage() {
                       placeholder="2020"
                     />
                   </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.foundedYear?.message}</p>
                 </div>
               </div>
             </div>
@@ -479,6 +445,7 @@ export default function CompanySetupPage() {
                     </div>
                     <select
                       name="employeeCount"
+                      {...register("employeeCount")}
                       value={formData.employeeCount}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -490,6 +457,7 @@ export default function CompanySetupPage() {
                       ))}
                     </select>
                   </div>
+                  <p className="text-red-500 text-sm mt-2">{errors.employeeCount?.message}</p>
                 </div>
 
                 <div>
@@ -503,6 +471,7 @@ export default function CompanySetupPage() {
                     <input
                       type="text"
                       name="headquarters"
+                      {...register("headquarters")}
                       value={formData.headquarters}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -510,6 +479,7 @@ export default function CompanySetupPage() {
                       required
                     />
                   </div>
+                  <p className="text-red-500 text-sm mt-2">{errors.headquarters?.message}</p>
                 </div>
 
                 <div>
@@ -526,14 +496,17 @@ export default function CompanySetupPage() {
                       <option key={tz} value={tz}>{tz}</option>
                     ))}
                   </select>
+                 <p className="text-red-500 text-sm mt-2">{errors.timezone?.message}</p>
+
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Primary Currency
+                    Primary Currency *
                   </label>
                   <select
                     name="currency"
+                    {...register("currency")}
                     value={formData.currency}
                     onChange={handleInputChange}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -545,6 +518,7 @@ export default function CompanySetupPage() {
                     <option value="AUD">AUD (A$)</option>
                     <option value="INR">INR (₹)</option>
                   </select>
+                  <p className="text-red-500 text-sm mt-2">{errors.currency?.message}</p>
                 </div>
 
                 <div>
@@ -559,6 +533,8 @@ export default function CompanySetupPage() {
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                     placeholder="Enter tax identification number"
                   />
+                 <p className="text-red-500 text-sm mt-2">{errors.taxId?.message}</p>
+
                 </div>
 
                 <div>
@@ -574,6 +550,8 @@ export default function CompanySetupPage() {
                     placeholder="Enter registration number"
                   />
                 </div>
+                 <p className="text-red-500 text-sm mt-2">{errors.registrationNumber?.message}</p>
+
               </div>
 
               <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
@@ -581,7 +559,7 @@ export default function CompanySetupPage() {
                   <FiShield className="h-5 w-5 text-amber-600 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-700">
-                      Your company information is stored securely in MongoDB with enterprise-grade encryption. 
+                      Your company information is stored securely in MongoDB with enterprise-grade encryption.
                       This data helps us customize your workflow management experience.
                     </p>
                   </div>
@@ -601,19 +579,17 @@ export default function CompanySetupPage() {
                   {workflowTypes.map(type => (
                     <div
                       key={type}
-                      className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
-                        formData.primaryWorkflowTypes.includes(type)
-                          ? 'border-amber-500 bg-amber-50'
-                          : 'border-gray-300 hover:border-amber-300'
-                      }`}
+                      className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${formData.primaryWorkflowTypes?.includes(type)
+                        ? 'border-amber-500 bg-amber-50'
+                        : 'border-gray-300 hover:border-amber-300'
+                        }`}
                       onClick={() => handleArrayChange('primaryWorkflowTypes', type)}
                     >
-                      <div className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
-                        formData.primaryWorkflowTypes.includes(type)
-                          ? 'border-amber-500 bg-amber-500'
-                          : 'border-gray-400'
-                      }`}>
-                        {formData.primaryWorkflowTypes.includes(type) && (
+                      <div className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${formData.primaryWorkflowTypes?.includes(type)
+                        ? 'border-amber-500 bg-amber-500'
+                        : 'border-gray-400'
+                        }`}>
+                        {formData.primaryWorkflowTypes?.includes(type) && (
                           <FiCheck className="h-3 w-3 text-white" />
                         )}
                       </div>
@@ -621,6 +597,7 @@ export default function CompanySetupPage() {
                     </div>
                   ))}
                 </div>
+                <p className="text-red-500 text-sm mt-2">{workflowError}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -629,6 +606,7 @@ export default function CompanySetupPage() {
                     Expected number of workflows
                   </label>
                   <select
+                    {...register("expectedWorkflows")}
                     name="expectedWorkflows"
                     value={formData.expectedWorkflows}
                     onChange={handleInputChange}
@@ -640,6 +618,8 @@ export default function CompanySetupPage() {
                     <option value="51-200">51-200 workflows</option>
                     <option value="200+">200+ workflows</option>
                   </select>
+                 <p className="text-red-500 text-sm mt-2">{errors.expectedWorkflows?.message}</p>
+
                 </div>
 
                 <div>
@@ -653,18 +633,21 @@ export default function CompanySetupPage() {
                           type="radio"
                           name="automationPriority"
                           value={level}
+                          defaultChecked={level === 'medium'}
                           checked={formData.automationPriority === level}
                           onChange={handleInputChange}
+                          // {...register("automationPriority")}
                           className="h-4 w-4 text-amber-600 focus:ring-amber-500"
                         />
                         <span className="ml-2 text-sm text-gray-700 capitalize">{level}</span>
                       </label>
                     ))}
                   </div>
+
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-4">
                   Integration Needs (Optional)
                 </label>
@@ -674,19 +657,18 @@ export default function CompanySetupPage() {
                       key={integration}
                       type="button"
                       onClick={() => handleArrayChange('integrationNeeds', integration)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                        formData.integrationNeeds.includes(integration)
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${formData.integrationNeeds?.includes(integration)
                           ? 'bg-amber-100 text-amber-700 border border-amber-300'
                           : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                      }`}
+                        }`}
                     >
                       {integration}
                     </button>
                   ))}
                 </div>
-              </div>
+              </div> */}
 
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <input
                   id="complianceRequired"
                   name="complianceRequired"
@@ -698,7 +680,7 @@ export default function CompanySetupPage() {
                 <label htmlFor="complianceRequired" className="ml-2 block text-sm text-gray-700">
                   We require compliance tracking (GDPR, HIPAA, SOC2, etc.)
                 </label>
-              </div>
+              </div> */}
 
               <div className="p-4 bg-linear-to-r from-amber-50 to-amber-100 rounded-lg border border-amber-200">
                 <div className="flex items-start space-x-3">
@@ -734,6 +716,7 @@ export default function CompanySetupPage() {
                     <option value="21-50">21-50 team members</option>
                     <option value="50+">50+ team members</option>
                   </select>
+                 <p className="text-red-500 text-sm mt-2">{errors.initialTeamSize?.message}</p>
                 </div>
 
                 <div>
@@ -747,6 +730,7 @@ export default function CompanySetupPage() {
                     <input
                       type="email"
                       name="adminEmail"
+                      disabled
                       value={formData.adminEmail}
                       onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -762,18 +746,17 @@ export default function CompanySetupPage() {
                   Notification Preferences
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {Object.entries(formData.notificationPreferences).map(([channel, enabled]) => (
+                  { }
+                  {Object.entries(formData?.notificationPreferences || {}).map(([channel, enabled]) => (
                     <div
                       key={channel}
                       className="flex items-center justify-between p-4 border border-gray-300 rounded-lg hover:border-amber-300 transition-all duration-200"
                     >
                       <div className="flex items-center">
-                        <div className={`p-2 rounded-lg mr-3 ${
-                          enabled ? 'bg-amber-100' : 'bg-gray-100'
-                        }`}>
-                          <FiLayers className={`h-5 w-5 ${
-                            enabled ? 'text-amber-600' : 'text-gray-400'
-                          }`} />
+                        <div className={`p-2 rounded-lg mr-3 ${enabled ? 'bg-amber-100' : 'bg-gray-100'
+                          }`}>
+                          <FiLayers className={`h-5 w-5 ${enabled ? 'text-amber-600' : 'text-gray-400'
+                            }`} />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-700 capitalize">{channel}</p>
@@ -788,14 +771,12 @@ export default function CompanySetupPage() {
                       <button
                         type="button"
                         onClick={() => handleNotificationChange(channel)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-                          enabled ? 'bg-amber-600' : 'bg-gray-300'
-                        }`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${enabled ? 'bg-amber-600' : 'bg-gray-300'
+                          }`}
                       >
                         <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            enabled ? 'translate-x-5' : 'translate-x-0'
-                          }`}
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
                         />
                       </button>
                     </div>
@@ -807,10 +788,10 @@ export default function CompanySetupPage() {
                 <div className="flex items-start space-x-3">
                   <FiHelpCircle className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                  <p className="text-sm text-gray-700">
-                    Don&apos;t worry about getting everything perfect now. You can always invite more team members, 
-                    change notification settings, and add new workflows from your dashboard later.
-                  </p>
+                    <p className="text-sm text-gray-700">
+                      Don&apos;t worry about getting everything perfect now. You can always invite more team members,
+                      change notification settings, and add new workflows from your dashboard later.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -823,11 +804,10 @@ export default function CompanySetupPage() {
               type="button"
               onClick={handlePrevStep}
               disabled={currentStep === 1}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                currentStep === 1
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${currentStep === 1
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                }`}
             >
               <FiArrowLeft className="w-4 h-4" />
               Previous
@@ -835,7 +815,7 @@ export default function CompanySetupPage() {
 
             <button
               type="button"
-              onClick={handleNextStep}
+              onClick={handleFormData}
               disabled={loading}
               className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
             >
@@ -864,18 +844,16 @@ export default function CompanySetupPage() {
           <div className="flex justify-between">
             {[1, 2, 3, 4].map(step => (
               <div key={step} className="flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                  step === currentStep
-                    ? 'bg-amber-500 text-white'
-                    : step < currentStep
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step === currentStep
+                  ? 'bg-amber-500 text-white'
+                  : step < currentStep
                     ? 'bg-amber-100 text-amber-600'
                     : 'bg-gray-100 text-gray-400'
-                }`}>
+                  }`}>
                   {step < currentStep ? <FiCheck className="w-5 h-5" /> : step}
                 </div>
-                <span className={`text-xs font-medium ${
-                  step === currentStep ? 'text-amber-600' : 'text-gray-500'
-                }`}>
+                <span className={`text-xs font-medium ${step === currentStep ? 'text-amber-600' : 'text-gray-500'
+                  }`}>
                   {step === 1 && 'Basic Info'}
                   {step === 2 && 'Details'}
                   {step === 3 && 'Workflows'}
@@ -890,7 +868,7 @@ export default function CompanySetupPage() {
       <footer className="mt-12 py-6 border-t border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm text-gray-500">
-            Your data is securely stored in MongoDB with enterprise encryption. 
+            Your data is securely stored in MongoDB with enterprise encryption.
             All information is used solely to enhance your workflow management experience.
           </p>
           <p className="mt-2 text-xs text-gray-400">

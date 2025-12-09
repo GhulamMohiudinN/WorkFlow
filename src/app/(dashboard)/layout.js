@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useMemo, useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useWorkspaceStore, useUserStore } from "../store";
+import {socket} from "../utils/socket";
 import {
   FiMenu,
   FiX,
@@ -19,44 +21,54 @@ import {
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import Link from "next/link";
+import AUTH from "../axios/auth";
 
-// Dummy data
-const DUMMY_USER = {
-  email: "john.doe@acme.com",
-  name: "John Doe"
-};
-
-const DUMMY_COMPANY = {
-  id: 1,
-  name: "Acme Corporation"
-};
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const {workspace, role, clearWorkspace, setWorkspace} = useWorkspaceStore();
+  const {user} = useUserStore();
+  const router = useRouter();
+  const {clearUser} = useUserStore();
   const pathname = usePathname();
-  const user = DUMMY_USER;
-  const company = DUMMY_COMPANY;
 
+  const signout = async () => {
+    router.push('/');
+    AUTH.logout();
+    clearWorkspace();
+    clearUser();
+  };
+
+   // connected with socket.io 
+  useMemo(() => {
+    if (user?._id) {
+      socket.emit("register", user?._id);
+    }
+  }, [user?._id]);
+
+  // update workspaceIfMember is added in workspace 
+  useEffect(() => {
+    socket.on(`workspace:${workspace?._id}:memberAdded`, (newMember) => {
+      console.log("New member added:", newMember);
+       setWorkspace(newMember);
+    });
+
+    return () => {
+      socket.off(`workspace:${workspace?._id}:memberAdded`);
+    };
+  }, [workspace]);
+  
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome, current: pathname === '/dashboard' },
-    { name: 'Company', href: '/company', icon: FaBuilding, current: pathname === '/company' },
-    { name: 'Processes', href: '/processes', icon: FiLayers, current: pathname === '/processes' },
-    { name: 'Users', href: '/users', icon: FiUsers, current: pathname === '/users' },
+    { name: 'Company', href: '#', icon: FaBuilding, current: pathname === '/company' },
+    { name: 'Processes', href: '#', icon: FiLayers, current: pathname === '/processes' },
+    { name: 'Users', href: '#', icon: FiUsers, current: pathname === '/users' },
     // { name: 'Analytics', href: '/dashboard/analytics', icon: FiBarChart2, current: pathname === '/dashboard/analytics' },
-    { name: 'Settings', href: '/settings', icon: FiSettings, current: pathname === '/settings' },
+    { name: 'Settings', href: '#', icon: FiSettings, current: pathname === '/settings' },
   ];
 
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-amber-50 to-white">
-//         <div className="text-center">
-//           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
-//           <p className="mt-4 text-gray-600">Loading your workspace...</p>
-//         </div>
-//       </div>
-//     );
-//   }
+
 
   return (
     <div className="min-h-screen bg-linear-to-b from-amber-50 to-white">
@@ -99,13 +111,13 @@ export default function DashboardLayout({ children }) {
               <div className="shrink-0">
                 <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center">
                   <span className="text-white font-semibold">
-                    {user?.email?.charAt(0).toUpperCase()}
+                    {workspace?.adminId?.name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-                <p className="text-xs text-gray-500">Admin</p>
+                <p className="text-sm font-medium text-gray-900">{workspace?.companyEmail}</p>
+                <p className="text-xs text-gray-500">{role}</p>
               </div>
             </div>
           </div>
@@ -174,9 +186,9 @@ export default function DashboardLayout({ children }) {
                 </button>
                 <div className="ml-4">
                   <h1 className="text-xl font-semibold text-gray-900">
-                    {company?.name || "Company Workspace"}
+                    {workspace?.companyName || "Company Workspace"}
                   </h1>
-                  <p className="text-sm text-gray-500">Welcome back, {user?.email}</p>
+                  <p className="text-sm text-gray-500">Welcome back, {(user?.name)?.toUpperCase()}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -194,13 +206,13 @@ export default function DashboardLayout({ children }) {
                     <div className="shrink-0">
                       <div className="h-8 w-8 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">
-                          {user?.email?.charAt(0).toUpperCase()}
+                          {workspace?.adminId?.name?.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     </div>
                     <div className="hidden md:block text-left">
                       <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-                      <p className="text-xs text-gray-500">Admin</p>
+                      <p className="text-xs text-gray-500">{role}</p>
                     </div>
                     <FiChevronDown className="h-5 w-5 text-gray-400" />
                   </button>
@@ -222,13 +234,13 @@ export default function DashboardLayout({ children }) {
                         Settings
                       </a>
                       <div className="border-t border-gray-100"></div>
-                      <Link
-                        href="/login"
+                      <p
+                        onClick={signout}
                         className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
                         <FiLogOut className="mr-3 h-4 w-4" />
                         Sign out
-                      </Link>
+                      </p>
                     </div>
                   )}
                 </div>
@@ -251,7 +263,7 @@ export default function DashboardLayout({ children }) {
               <div className="flex items-center space-x-4">
                 <FiGlobe className="h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-500">
-                  {company?.name} • Private Workspace
+                  {workspace?.companyName} • Private Workspace
                 </span>
               </div>
               <div className="mt-2 md:mt-0">

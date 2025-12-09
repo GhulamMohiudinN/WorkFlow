@@ -1,8 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import AUTH from './axios/auth';
+import USER from './axios/user';
+import FullScreenLoader from './(component)/FullScreenLoader';
+import { useUserStore, useWorkspaceStore } from "./store";
 import { 
   FiArrowRight, 
   FiCheckCircle, 
@@ -21,18 +25,50 @@ import {
   FiCpu
 } from 'react-icons/fi';
 
-import homeOne from '@/assists/homeOne.png';
-import homeTwo from '@/assists/homeTwo.png';
-import homeThree from '@/assists/homeThree.png';
-import homeFour from '@/assists/homeFour.png';
-import homeFive from '@/assists/homeFive.png';
-import homeSix from '@/assists/homeSix.png';  
-import homeSeven from '@/assists/homeSeven.png';
-import homeEight from '@/assists/homeEight.png';
+import homeOne from '../assists/homeOne.png';
+import homeTwo from '../assists/homeTwo.png';
+import homeThree from '../assists/homeThree.png';
+import homeFour from '../assists/homeFour.png';
+import homeFive from '../assists/homeFive.png';
+import homeSix from '../assists/homeSix.png';  
+import homeSeven from '../assists/homeSeven.png';
+import homeEight from '../assists/homeEight.png';
+
 
 export default function Home() {
+  const [loading, setLoading] = useState(false);
+  const {setUser} = useUserStore()
+  const {setWorkspace} = useWorkspaceStore()
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  useEffect(() => {
+    const refreshToken =  localStorage.getItem("refreshToken");
+    setLoading(true);
+     if (!refreshToken) {
+      setLoading(false);
+      return;
+    }
+    const fetchRefrestToken = async () => {
+      const {data:tokenData, error:tokenError} = await AUTH.refreshToken({refreshToken});
+      if (tokenError) {
+        setLoading(false);
+       console.log(tokenData)
+       return
+      }
+      localStorage.setItem("accessToken", tokenData.access.token);
+      localStorage.setItem("refreshToken", tokenData.refresh.token);
+      const {data,error} = await USER.getUser()
+      if (error) {
+        setLoading(false);
+        return
+      }
+      setUser(data.user)
+      setWorkspace(data.workspace[0])
+      setLoading(false);
+      router.push("/dashboard");
+    }
+     fetchRefrestToken()
+  },[])
+
 
   const features = [
     {
@@ -94,6 +130,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-white to-amber-50">
+      <FullScreenLoader loading={loading} />
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

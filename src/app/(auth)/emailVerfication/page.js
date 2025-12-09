@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { 
   FiMail, 
@@ -10,39 +10,56 @@ import {
   FiAlertCircle,
   FiShield
 } from "react-icons/fi";
+import AUTH from "../../axios/auth";
+import toast, { Toaster } from 'react-hot-toast';
+
 
 export default function EmailVerificationPage() {
   const [countdown, setCountdown] = useState(60);
   const [resending, setResending] = useState(false);
+  const userData = JSON.parse(sessionStorage.getItem("userData"));
   const router = useRouter();
 
-  useEffect(() => {
-    setTimeout(() => {
-      router.push("/workspaceCreation");
-    }, 3000);
-  }, );
 
-  useEffect(() => {
+  useMemo(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [countdown]);
 
-  const handleResendEmail = () => {
-    if (countdown > 0) return;
-    
-    setResending(true);
-    // Simulate API call
-    setTimeout(() => {
-      setResending(false);
-      setCountdown(60);
-      alert("Verification email sent successfully!");
-    }, 1500);
-  };
+  const handleResendEmail = async () => {
+  // Prevent resending while countdown is active
+  if (countdown > 0) return;
+
+  try {
+    setResending(true); // start resending animation
+
+    const { error } = await AUTH.sendVerificationEmail(userData);
+
+    if (error) {
+      toast.error("Something went wrong! Please try again.");
+      router.push('/signup');
+    } else {
+      toast.success("Verification email sent successfully!");
+
+      setTimeout(() => {
+        setCountdown(60); 
+        setResending(false);
+      }, 1500);
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Unexpected error occurred!");
+    setResending(false);
+  }finally{
+    setResending(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-linear-to-b from-amber-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <Toaster duration={4000} position= {'top-right'}/>
       {/* Back Button */}
       <div className="absolute top-6 left-6">
         <button
@@ -76,12 +93,12 @@ export default function EmailVerificationPage() {
             
             <div className="space-y-4">
               <p className="text-gray-600">
-                Weve sent a verification link to
+                We've sent a verification link to
               </p>
               
               <div className="inline-flex items-center bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
                 <FiMail className="h-5 w-5 text-amber-500 mr-2" />
-                <span className="font-medium text-gray-800">user@company.com</span>
+                <span className="font-medium text-gray-800">{userData?.email}</span>
               </div>
               
               <p className="text-gray-600 text-sm">

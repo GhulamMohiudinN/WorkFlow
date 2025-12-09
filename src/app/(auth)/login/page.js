@@ -3,11 +3,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  FiEye, 
-  FiEyeOff, 
-  FiLock, 
-  FiMail, 
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { loginSchema } from "../../formValidationScheme/authSchema";
+import AUTH from "../../axios/auth";
+import toast, { Toaster } from 'react-hot-toast';
+import {
+  FiEye,
+  FiEyeOff,
+  FiLock,
+  FiMail,
   FiShield,
   FiArrowLeft,
   FiUsers,
@@ -18,32 +23,43 @@ import {
   FiCheckCircle,
   FiCpu
 } from "react-icons/fi";
+import { useUserStore, useWorkspaceStore } from "../../store";
 
-// Update these paths with your actual logo paths
-import logoWithText from "@/assists/logo.png";
-import logo from "@/assists/logo.png";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const router = useRouter();
+  const {setUser} = useUserStore()
+  const {setWorkspace} = useWorkspaceStore()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm({
+    resolver: yupResolver(loginSchema)
+  });
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (formData) => {
     setLoading(true);
-    console.log("Login functionality to be implemented");
-    // Simulate API call
-    setTimeout(() => {
+    const {data, error } = await AUTH.login(formData);
+    if (error) {
+      toast.error("Invalid email address or password");
       setLoading(false);
-      router.push("/dashboard");
-    }, 1500);
+    }
+    localStorage.setItem("accessToken", data.tokens.access.token);
+    {rememberMe && localStorage.setItem("refreshToken", data.tokens.refresh.token)}
+    setUser(data.user)
+    setWorkspace(data.workspace[0])
+    setLoading(false);
+    router.push("/dashboard");
+   
   };
 
   return (
     <div className="min-h-screen flex bg-white">
+      <Toaster position="top-right" duration={4000} />
       {/* Left Side - Login Form */}
       <div className="flex-1 flex flex-col justify-start pt-12 px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
@@ -53,7 +69,7 @@ export default function LoginPage() {
               <FiBriefcase className="w-12 h-12 text-amber-600" />
             </div>
           </div>
-          
+
           {/* Back to Home Button */}
           <div className="flex justify-center lg:justify-start mb-6">
             <button
@@ -77,7 +93,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <form className="mt-8 space-y-6" >
             <div>
               <label
                 htmlFor="email"
@@ -90,17 +106,13 @@ export default function LoginPage() {
                   <FiMail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="email"
-                  name="email"
                   type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  {...register("email")}
                   className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="your@company.com"
                 />
               </div>
+              <p className="text-red-500 text-sm mt-2">{errors.email?.message}</p>
             </div>
 
             <div>
@@ -115,18 +127,13 @@ export default function LoginPage() {
                   <FiLock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="password"
-                  name="password"
+                  {...register("password")}
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="Enter your password"
                 />
                 <button
-                  type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -137,6 +144,8 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              <p className="text-red-500 text-sm mt-2">{errors.password?.message}</p>
+
             </div>
 
             <div className="flex items-center justify-between">
@@ -169,7 +178,7 @@ export default function LoginPage() {
 
             <div>
               <button
-                type="submit"
+                onClick={handleSubmit(handleLogin)}
                 disabled={loading}
                 className="group relative w-full hover:cursor-pointer flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
               >

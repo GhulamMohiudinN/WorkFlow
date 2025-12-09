@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import {socket} from "../../utils/socket";
 import { 
   FiUsers, 
   FiLayers, 
@@ -17,16 +18,21 @@ import {
   FiEdit,
   FiSettings
 } from "react-icons/fi";
+import { useUserStore, useWorkspaceStore } from "../../store";
+import { useMemo } from "react";
 
 export default function DashboardPage() {
-  // Dummy data
+  const {user} = useUserStore();
+  const {workspace, role} = useWorkspaceStore();
+  console.log(workspace)
   const company = {
     name: "TechFlow Inc",
     email: "contact@techflow.com",
     members: 8,
     processes: 12
   };
-
+ 
+  
   const users = [
     { id: 1, name: "John Doe", email: "john@techflow.com", role: "admin", status: "active" },
     { id: 2, name: "Sarah Chen", email: "sarah@techflow.com", role: "editor", status: "active" },
@@ -71,7 +77,8 @@ export default function DashboardPage() {
               Manage your team, create processes, and optimize workflows
             </p>
           </div>
-          <div className="mt-4 md:mt-0 flex space-x-3">
+         {role !== 'viewer'&& 
+         <div className="mt-4 md:mt-0 flex space-x-3">
             <Link
               href="/users/add"
               className="inline-flex items-center px-4 py-3 bg-linear-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-200 shadow-lg shadow-amber-500/25"
@@ -80,13 +87,13 @@ export default function DashboardPage() {
               Add Team Member
             </Link>
             <Link
-              href="/processes/new"
-              className="inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all duration-200"
+              href="#"
+              className="cursor-not-allowed inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all duration-200"
             >
               <FiPlus className="mr-2 h-5 w-5" />
               New Process
             </Link>
-          </div>
+          </div> }
         </div>
       </div>
 
@@ -96,14 +103,14 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Team Members</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalUsers}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{workspace?.members.length}</p>
             </div>
             <div className="bg-amber-100 p-3 rounded-lg">
               <FiUsers className="h-6 w-6 text-amber-600" />
             </div>
           </div>
           <div className="mt-4">
-            <Link href="/users" className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700">
+            <Link href="#" className="cursor-not-allowed inline-flex items-center text-sm text-amber-600 hover:text-amber-700">
               View all members
               <FiChevronRight className="ml-1 h-4 w-4" />
             </Link>
@@ -121,7 +128,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Link href="/processes" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
+            <Link href="#" className="cursor-not-allowed inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
               View processes
               <FiChevronRight className="ml-1 h-4 w-4" />
             </Link>
@@ -172,7 +179,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
             <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              <Link href="/activity" className="text-sm text-amber-600 hover:text-amber-700 font-medium">
+              <Link href="#" className="cursor-not-allowed text-sm text-amber-600 hover:text-amber-700 font-medium">
                 View all
               </Link>
             </div>
@@ -203,35 +210,52 @@ export default function DashboardPage() {
 
         {/* Team Overview */}
         <div>
-          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
+         {workspace?.members?.length > 0 &&
+            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
             <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900">Team Overview</h2>
-              <Link href="/users" className="text-sm text-amber-600 hover:text-amber-700 font-medium">
+              <Link href="#" className="cursor-not-allowed text-sm text-amber-600 hover:text-amber-700 font-medium">
                 View all
               </Link>
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {users.slice(0, 4).map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-                          <span className="text-white font-semibold">
-                            {user.name.charAt(0)}
-                          </span>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                        <span className={`text-xs px-2 py-1 rounded-full ${getRoleColor(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </div>
-                    </div>
-                    <FiChevronRight className="h-5 w-5 text-gray-400" />
+                 {workspace.members.map((memberDetail) => {
+          if (memberDetail?.memberId?._id === user?._id) return null;
+
+          return (
+            <div
+              key={memberDetail?.memberId?._id}
+              className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                    <span className="text-white font-semibold">
+                      {memberDetail?.memberId?.name?.charAt(0)}
+                    </span>
                   </div>
-                ))}
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {memberDetail.memberId?.name}
+                  </p>
+
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${getRoleColor(
+                      memberDetail.role
+                    )}`}
+                  >
+                    {memberDetail.role}
+                  </span>
+                </div>
+              </div>
+
+              <FiChevronRight className="h-5 w-5 text-gray-400" />
+            </div>
+          );
+        })}
                 <Link
                   href="/users/add"
                   className="flex items-center justify-center w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-amber-600 hover:border-amber-300 transition-all duration-200"
@@ -242,7 +266,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
+}
           {/* Quick Actions */}
           <div className="mt-6 bg-linear-to-r from-amber-500 to-amber-600 rounded-2xl p-6 text-white">
             <h3 className="font-semibold mb-4">Quick Actions</h3>
@@ -254,14 +278,14 @@ export default function DashboardPage() {
                 </div>
                 <FiChevronRight className="h-5 w-5" />
               </Link>
-              <Link href="/processes/new" className="flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200">
+              <Link href="#" className="cursor-not-allowed flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200">
                 <div className="flex items-center">
                   <FiLayers className="mr-3 h-5 w-5" />
                   <span>Create process</span>
                 </div>
                 <FiChevronRight className="h-5 w-5" />
               </Link>
-              <Link href="/company" className="flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200">
+              <Link href="#" className="cursor-not-allowed flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200">
                 <div className="flex items-center">
                   <FiSettings className="mr-3 h-5 w-5" />
                   <span>Company settings</span>
