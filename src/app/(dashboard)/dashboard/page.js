@@ -117,7 +117,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="blur bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className=" bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Active Processes</p>
@@ -135,7 +135,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="blur bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className=" bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
@@ -153,7 +153,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="blur bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className=" bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Completed Tasks</p>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Activity */}
-        <div className="lg:col-span-2 blur">
+        <div className="lg:col-span-2 ">
           <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
             <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   FiSettings, 
   FiSave, 
@@ -17,47 +17,115 @@ import {
   FiAlertCircle,
   FiCheckCircle
 } from "react-icons/fi";
+import { FiCpu } from "react-icons/fi";
+import WORKSPACE from "../../axios/workspace";
+import { useWorkspaceStore } from "../../store";
+import Loader from "../../(component)/Loader"
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
-  
-  // Dummy settings data
+  const { workspace } = useWorkspaceStore();
+  const [loading, setLoading] = useState(true);
+  const [apiSettings, setApiSettings] = useState(null);
+
+  // Settings state
   const [settings, setSettings] = useState({
     // General Settings
-    workspaceName: "TechFlow Inc Workspace",
-    timezone: "America/New_York",
+    workspaceName: "hi",
+    timezone: "",
     language: "English",
-    dateFormat: "MM/DD/YYYY",
+    dateFormat: "",
     
     // Security Settings
-    twoFactorAuth: true,
+    twoFactorAuth: false,
     sessionTimeout: "24 hours",
     ipWhitelist: false,
-    loginAlerts: true,
+    loginAlerts: false,
     
     // Notification Settings
-    emailNotifications: true,
-    pushNotifications: true,
-    processUpdates: true,
-    teamActivity: true,
+    emailNotifications: false,
+    pushNotifications: false,
+    processUpdates: false,
+    teamActivity: false,
     weeklyReports: true,
     
     // Integration Settings
-    slackIntegration: true,
+    slackIntegration: false,
     googleWorkspace: false,
     microsoftTeams: false,
     
     // Data & Privacy
-    dataRetention: "24 months",
+    dataRetention: "",
     autoBackup: true,
-    exportFormat: "JSON",
+    exportFormat: "",
     
     // API Settings
     apiEnabled: false,
     apiKey: "sk_live_**************",
     webhookUrl: "https://webhook.techflow.com"
   });
+
+  useEffect(() => {
+    if (workspace?._id) {
+      const fetchSettings = async () => {
+        setLoading(true);
+        try {
+          const response = await WORKSPACE.getSettingsApi(workspace._id);
+          console.log("API Response:", response);
+          
+          if (response?.data?.success) {
+            setApiSettings(response?.data?.settings);
+            
+            // Map API data to settings state
+            setSettings({
+              // General Settings
+              workspaceName: response.data.settings.general?.workspaceName,
+              timezone: response.data.settings.general?.timezone || "",
+              language: "English", // Default as API doesn't provide language
+              dateFormat: response.data.settings.general?.dateFormat || "",
+              
+              // Security Settings
+              twoFactorAuth: response.data.settings.security?.twoFactorAuth || false,
+              sessionTimeout: response.data.settings.security?.sessionTimeoutInHours ? 
+                `${response.data.settings.security.sessionTimeoutInHours} hour${response.data.settings.security.sessionTimeoutInHours > 1 ? 's' : ''}` : "24 hours",
+              ipWhitelist: false, // Not in API response
+              loginAlerts: response.data.settings.security?.loginAlerts || false,
+              
+              // Notification Settings
+              emailNotifications: response.data.settings.notifications?.emailNotifications || false,
+              pushNotifications: response.data.settings.notifications?.pushNotifications || false,
+              processUpdates: response.data.settings.notifications?.processUpdates || false,
+              teamActivity: response.data.settings.notifications?.teamActivity || false,
+              weeklyReports: true, // Default
+              
+              // Integration Settings
+              slackIntegration: response.data.settings.integrations?.slackIntegration || false,
+              googleWorkspace: response.data.settings.integrations?.googleWorkspace || false,
+              microsoftTeams: response.data.settings.integrations?.microsoftTeams || false,
+              
+              // Data & Privacy
+              dataRetention: response.data.settings.dataPrivacy?.dataRetentionPeriodInMonths ? 
+                `${response.data.settings.dataPrivacy.dataRetentionPeriodInMonths} months` : "24 months",
+              autoBackup: true, // Default
+              exportFormat: response.data.settings.dataPrivacy?.exportFormat?.toUpperCase() || "CSV",
+              
+              // API Settings
+              apiEnabled: response.data.settings.apiSettings?.enableApiAccess || false,
+              apiKey: "sk_live_**************", // Default
+              webhookUrl: "https://webhook.techflow.com" // Default
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching settings:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchSettings();
+    }
+  }, [workspace?._id]);
 
   const tabs = [
     { id: "general", label: "General", icon: FiSettings },
@@ -72,7 +140,6 @@ export default function SettingsPage() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      // Show success message
       console.log("Settings saved:", settings);
     }, 1000);
   };
@@ -89,6 +156,20 @@ export default function SettingsPage() {
     const newKey = "sk_live_" + Math.random().toString(36).substring(2, 15);
     handleInputChange('apiKey', newKey);
   };
+
+  // Loading State
+  if (loading) {
+    return (
+       <div className="flex items-center justify-center min-h-[400px]">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-amber-500 animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FiCpu className="h-6 w-6 text-amber-500 animate-pulse" />
+            </div>
+          </div>
+        </div>
+    );
+  }
 
   return (
     <div className="py-6">
@@ -176,10 +257,11 @@ export default function SettingsPage() {
                       <option value="America/Los_Angeles">Pacific Time (PT)</option>
                       <option value="Europe/London">London (GMT)</option>
                       <option value="Europe/Berlin">Central Europe (CET)</option>
+                      <option value="Africa/Algiers">Algiers (CET)</option>
                     </select>
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Language
                     </label>
@@ -194,7 +276,7 @@ export default function SettingsPage() {
                       <option value="German">German</option>
                       <option value="Japanese">Japanese</option>
                     </select>
-                  </div>
+                  </div> */}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -439,7 +521,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <FiDownload className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
@@ -459,7 +541,7 @@ export default function SettingsPage() {
                       }`}
                     />
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
           )}
@@ -584,7 +666,7 @@ export default function SettingsPage() {
                   <p className="mt-1 text-sm text-gray-500">How long we keep your inactive data</p>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <FiDatabase className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
@@ -604,7 +686,7 @@ export default function SettingsPage() {
                       }`}
                     />
                   </button>
-                </div>
+                </div> */}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -635,7 +717,7 @@ export default function SettingsPage() {
                         <p className="text-sm text-gray-600">Download all your workspace data</p>
                       </div>
                     </div>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    <button className="px-4 py-2 hover:cursor-not-allowed bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
                       Export Data
                     </button>
                   </div>
@@ -660,19 +742,19 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => handleToggle('apiEnabled')}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                    className={`hover:cursor-not-allowed relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                       settings.apiEnabled ? 'bg-amber-600' : 'bg-gray-300'
                     }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      className={`pointer-events-none  inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                         settings.apiEnabled ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>
                 </div>
 
-                {settings.apiEnabled && (
+                {/* {settings.apiEnabled && (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -723,7 +805,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </>
-                )}
+                )} */}
               </div>
             </div>
           )}
@@ -756,7 +838,7 @@ export default function SettingsPage() {
                   Download a complete archive of all your workspace data.
                 </p>
               </div>
-              <button className="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-200">
+              <button className="hover:cursor-not-allowed mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-200">
                 Export Data
               </button>
             </div>

@@ -61,11 +61,11 @@ export default function DashboardLayout({ children }) {
   
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome, current: pathname === '/dashboard' },
-    { name: 'Company', href: '#', icon: FaBuilding, current: pathname === '/company' },
-    { name: 'Processes', href: '#', icon: FiLayers, current: pathname === '/processes' },
-    { name: 'Users', href: '#', icon: FiUsers, current: pathname === '/users' },
+    { name: 'Company', href: 'company', icon: FaBuilding, current: pathname === '/company' },
+    { name: 'Processes', href: 'processes', icon: FiLayers, current: pathname === '/processes' },
+    { name: 'Users', href: 'users', icon: FiUsers, current: pathname === '/users' },
     // { name: 'Analytics', href: '/dashboard/analytics', icon: FiBarChart2, current: pathname === '/dashboard/analytics' },
-    { name: 'Settings', href: '#', icon: FiSettings, current: pathname === '/settings' },
+    { name: 'Settings', href: '/settings', icon: FiSettings, current: pathname === '/settings' },
   ];
 
 

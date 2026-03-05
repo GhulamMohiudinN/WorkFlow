@@ -18,6 +18,15 @@ const WORKSPACE = {
     return tryCatch(API.post("/workspace/verify-invite", body));
   },
 
+  getSettingsApi : async (workspaceId) => {
+    return tryCatch(API.get(`/workspace/${workspaceId}/getSettings`));
+  },
+
+  updateSettingApi : async (workspaceId) => {
+    return tryCatch(API.post(`/workspace/${workspaceId}/updateSettings`));
+  }
+  
+
 }
 
 

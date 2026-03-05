@@ -69,6 +69,7 @@ export default function SignupPage() {
     const { email, password, userName } = formData;
     const userPayload = {email,password,name:userName,isEmailVerified:true} 
     const {data:newUserData} = await USER.createUser(userPayload)
+    console.log(newUserData, 'new user data 8320830298302984039248390')
     const payload = {
     workspaceId:userData.userData?.workspaceId,
     memberId: newUserData._id,
@@ -77,6 +78,7 @@ export default function SignupPage() {
     customMessage: userData.userData?.customMessage,
     role: userData.userData?.role
   }
+  
   const {error} = await WORKSPACE.addMemberInWorkspace(payload)
   if(error) {
     toast.error("You  are already a member of this workspace!");
