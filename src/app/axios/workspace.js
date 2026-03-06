@@ -22,8 +22,8 @@ const WORKSPACE = {
     return tryCatch(API.get(`/workspace/${workspaceId}/getSettings`));
   },
 
-  updateSettingApi : async (workspaceId) => {
-    return tryCatch(API.post(`/workspace/${workspaceId}/updateSettings`));
+  updateSettingApi : async (workspaceId, body) => {
+    return tryCatch(API.patch(`/workspace/${workspaceId}/updateSettings`, body));
   }
   
 

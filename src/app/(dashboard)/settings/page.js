@@ -21,6 +21,7 @@ import { FiCpu } from "react-icons/fi";
 import WORKSPACE from "../../axios/workspace";
 import { useWorkspaceStore } from "../../store";
 import Loader from "../../(component)/Loader"
+import toast from "react-hot-toast";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const { workspace } = useWorkspaceStore();
   const [loading, setLoading] = useState(true);
   const [apiSettings, setApiSettings] = useState(null);
+  const [initialSettings, setInitialSettings] = useState(null);
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -77,19 +79,18 @@ export default function SettingsPage() {
           if (response?.data?.success) {
             setApiSettings(response?.data?.settings);
             
-            // Map API data to settings state
-            setSettings({
+            const mappedSettings = {
               // General Settings
-              workspaceName: response.data.settings.general?.workspaceName,
+              workspaceName: response.data.settings.general?.workspaceName || "hi",
               timezone: response.data.settings.general?.timezone || "",
-              language: "English", // Default as API doesn't provide language
+              language: "English",
               dateFormat: response.data.settings.general?.dateFormat || "",
               
               // Security Settings
               twoFactorAuth: response.data.settings.security?.twoFactorAuth || false,
               sessionTimeout: response.data.settings.security?.sessionTimeoutInHours ? 
                 `${response.data.settings.security.sessionTimeoutInHours} hour${response.data.settings.security.sessionTimeoutInHours > 1 ? 's' : ''}` : "24 hours",
-              ipWhitelist: false, // Not in API response
+              ipWhitelist: false,
               loginAlerts: response.data.settings.security?.loginAlerts || false,
               
               // Notification Settings
@@ -97,7 +98,7 @@ export default function SettingsPage() {
               pushNotifications: response.data.settings.notifications?.pushNotifications || false,
               processUpdates: response.data.settings.notifications?.processUpdates || false,
               teamActivity: response.data.settings.notifications?.teamActivity || false,
-              weeklyReports: true, // Default
+              weeklyReports: true,
               
               // Integration Settings
               slackIntegration: response.data.settings.integrations?.slackIntegration || false,
@@ -107,17 +108,21 @@ export default function SettingsPage() {
               // Data & Privacy
               dataRetention: response.data.settings.dataPrivacy?.dataRetentionPeriodInMonths ? 
                 `${response.data.settings.dataPrivacy.dataRetentionPeriodInMonths} months` : "24 months",
-              autoBackup: true, // Default
+              autoBackup: true,
               exportFormat: response.data.settings.dataPrivacy?.exportFormat?.toUpperCase() || "CSV",
               
               // API Settings
               apiEnabled: response.data.settings.apiSettings?.enableApiAccess || false,
-              apiKey: "sk_live_**************", // Default
-              webhookUrl: "https://webhook.techflow.com" // Default
-            });
+              apiKey: "sk_live_**************",
+              webhookUrl: "https://webhook.techflow.com"
+            };
+            
+            setSettings(mappedSettings);
+            setInitialSettings(mappedSettings);
           }
         } catch (error) {
           console.error("Error fetching settings:", error);
+          toast.error("Failed to load settings");
         } finally {
           setLoading(false);
         }
@@ -136,12 +141,157 @@ export default function SettingsPage() {
     { id: "api", label: "API", icon: FiZap },
   ];
 
-  const handleSave = () => {
+  // Function to get changed settings only
+  const getChangedSettings = () => {
+    if (!initialSettings) return null;
+    
+    const changedSettings = {};
+    
+    // Helper to extract number from string like "24 hours" -> 24
+    const extractNumber = (str) => {
+      if (!str) return null;
+      const match = str.match(/\d+/);
+      return match ? parseInt(match[0]) : null;
+    };
+
+    // Check General settings
+    if (settings.workspaceName !== initialSettings.workspaceName) {
+      changedSettings.general = {
+        ...changedSettings.general,
+        workspaceName: settings.workspaceName
+      };
+    }
+    
+    if (settings.timezone !== initialSettings.timezone) {
+      changedSettings.general = {
+        ...changedSettings.general,
+        timezone: settings.timezone
+      };
+    }
+    
+    if (settings.dateFormat !== initialSettings.dateFormat) {
+      changedSettings.general = {
+        ...changedSettings.general,
+        dateFormat: settings.dateFormat
+      };
+    }
+    
+    // Check Security settings
+    const securityChanges = {};
+    if (settings.twoFactorAuth !== initialSettings.twoFactorAuth) {
+      securityChanges.twoFactorAuth = settings.twoFactorAuth;
+    }
+    
+    const sessionTimeoutNumber = extractNumber(settings.sessionTimeout);
+    const initialSessionTimeoutNumber = extractNumber(initialSettings.sessionTimeout);
+    if (sessionTimeoutNumber !== initialSessionTimeoutNumber) {
+      securityChanges.sessionTimeoutInHours = sessionTimeoutNumber;
+    }
+    
+    if (settings.loginAlerts !== initialSettings.loginAlerts) {
+      securityChanges.loginAlerts = settings.loginAlerts;
+    }
+    
+    if (Object.keys(securityChanges).length > 0) {
+      changedSettings.security = securityChanges;
+    }
+    
+    // Check Notification settings
+    const notificationChanges = {};
+    if (settings.emailNotifications !== initialSettings.emailNotifications) {
+      notificationChanges.emailNotifications = settings.emailNotifications;
+    }
+    if (settings.pushNotifications !== initialSettings.pushNotifications) {
+      notificationChanges.pushNotifications = settings.pushNotifications;
+    }
+    if (settings.processUpdates !== initialSettings.processUpdates) {
+      notificationChanges.processUpdates = settings.processUpdates;
+    }
+    if (settings.teamActivity !== initialSettings.teamActivity) {
+      notificationChanges.teamActivity = settings.teamActivity;
+    }
+    
+    if (Object.keys(notificationChanges).length > 0) {
+      changedSettings.notifications = notificationChanges;
+    }
+    
+    // Check Integration settings
+    const integrationChanges = {};
+    if (settings.slackIntegration !== initialSettings.slackIntegration) {
+      integrationChanges.slackIntegration = settings.slackIntegration;
+    }
+    if (settings.googleWorkspace !== initialSettings.googleWorkspace) {
+      integrationChanges.googleWorkspace = settings.googleWorkspace;
+    }
+    if (settings.microsoftTeams !== initialSettings.microsoftTeams) {
+      integrationChanges.microsoftTeams = settings.microsoftTeams;
+    }
+    
+    if (Object.keys(integrationChanges).length > 0) {
+      changedSettings.integrations = integrationChanges;
+    }
+    
+    // Check Data & Privacy settings
+    const dataChanges = {};
+    const retentionNumber = extractNumber(settings.dataRetention);
+    const initialRetentionNumber = extractNumber(initialSettings.dataRetention);
+    if (retentionNumber !== initialRetentionNumber) {
+      dataChanges.dataRetentionPeriodInMonths = retentionNumber;
+    }
+    
+    if (settings.exportFormat !== initialSettings.exportFormat) {
+      dataChanges.exportFormat = settings.exportFormat.toLowerCase();
+    }
+    
+    if (Object.keys(dataChanges).length > 0) {
+      changedSettings.dataPrivacy = dataChanges;
+    }
+    
+    // Check API settings
+    const apiChanges = {};
+    if (settings.apiEnabled !== initialSettings.apiEnabled) {
+      apiChanges.enableApiAccess = settings.apiEnabled;
+    }
+    
+    if (Object.keys(apiChanges).length > 0) {
+      changedSettings.apiSettings = apiChanges;
+    }
+    
+    return Object.keys(changedSettings).length > 0 ? changedSettings : null;
+  };
+
+  const handleSave = async () => {
+    if (!workspace?._id) {
+      toast.error("Workspace not found");
+      return;
+    }
+    
+    const changedSettings = getChangedSettings();
+    
+    if (!changedSettings) {
+      toast.success("No changes to save");
+      return;
+    }
+    
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const response = await WORKSPACE.updateSettingApi(workspace._id, {
+        ...changedSettings
+      });
+      
+
+      if (response?.data?.success) {
+        toast.success("Settings updated successfully");
+        setInitialSettings(settings);
+      } else {
+        toast.error(response?.data?.message || "Failed to update settings");
+      }
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      toast.error("Failed to update settings");
+    } finally {
       setSaving(false);
-      console.log("Settings saved:", settings);
-    }, 1000);
+    }
   };
 
   const handleToggle = (field) => {
@@ -260,23 +410,6 @@ export default function SettingsPage() {
                       <option value="Africa/Algiers">Algiers (CET)</option>
                     </select>
                   </div>
-
-                  {/* <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Language
-                    </label>
-                    <select
-                      value={settings.language}
-                      onChange={(e) => handleInputChange('language', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                    >
-                      <option value="English">English</option>
-                      <option value="Spanish">Spanish</option>
-                      <option value="French">French</option>
-                      <option value="German">German</option>
-                      <option value="Japanese">Japanese</option>
-                    </select>
-                  </div> */}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -520,28 +653,6 @@ export default function SettingsPage() {
                     />
                   </button>
                 </div>
-
-                {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FiDownload className="h-5 w-5 text-gray-400 mr-3" />
-                    <div>
-                      <p className="font-medium text-gray-900">Weekly Reports</p>
-                      <p className="text-sm text-gray-600">Receive weekly performance reports</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleToggle('weeklyReports')}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                      settings.weeklyReports ? 'bg-amber-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        settings.weeklyReports ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div> */}
               </div>
             </div>
           )}
@@ -666,28 +777,6 @@ export default function SettingsPage() {
                   <p className="mt-1 text-sm text-gray-500">How long we keep your inactive data</p>
                 </div>
 
-                {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FiDatabase className="h-5 w-5 text-gray-400 mr-3" />
-                    <div>
-                      <p className="font-medium text-gray-900">Automatic Backups</p>
-                      <p className="text-sm text-gray-600">Daily automatic backups of your workspace</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleToggle('autoBackup')}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                      settings.autoBackup ? 'bg-amber-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        settings.autoBackup ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div> */}
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Export Format
@@ -699,7 +788,7 @@ export default function SettingsPage() {
                   >
                     <option value="JSON">JSON</option>
                     <option value="CSV">CSV</option>
-                    <option value="Excel">Excel</option>
+                    <option value="EXCEL">Excel</option>
                     <option value="PDF">PDF</option>
                   </select>
                   <p className="mt-1 text-sm text-gray-500">Format for data exports</p>
@@ -753,59 +842,6 @@ export default function SettingsPage() {
                     />
                   </button>
                 </div>
-
-                {/* {settings.apiEnabled && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        API Key
-                      </label>
-                      <div className="flex">
-                        <input
-                          type="text"
-                          value={settings.apiKey}
-                          readOnly
-                          className="flex-1 border border-gray-300 rounded-l-lg py-3 px-4 bg-gray-50"
-                        />
-                        <button
-                          onClick={generateApiKey}
-                          className="px-4 bg-amber-500 text-white rounded-r-lg hover:bg-amber-600 transition-colors duration-200"
-                        >
-                          Regenerate
-                        </button>
-                      </div>
-                      <p className="mt-1 text-sm text-gray-500">Keep this key secret</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Webhook URL
-                      </label>
-                      <input
-                        type="url"
-                        value={settings.webhookUrl}
-                        onChange={(e) => handleInputChange('webhookUrl', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                      />
-                      <p className="mt-1 text-sm text-gray-500">URL to receive webhook events</p>
-                    </div>
-
-                    <div className="bg-amber-50 rounded-lg border border-amber-200 p-4">
-                      <div className="flex items-start">
-                        <FiAlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5" />
-                        <div>
-                          <p className="font-medium text-gray-900">API Usage Guidelines</p>
-                          <ul className="text-sm text-gray-600 mt-2 space-y-1">
-                            <li>• Rate limit: 100 requests per minute</li>
-                            <li>• All requests must use HTTPS</li>
-                            <li>• Include API key in Authorization header</li>
-                            <li>• Webhooks support JSON payloads only</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )} */}
               </div>
             </div>
           )}
