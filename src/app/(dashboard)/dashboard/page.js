@@ -103,7 +103,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Team Members</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{workspace?.members.length}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{workspace?.members?.length}</p>
             </div>
             <div className="bg-amber-100 p-3 rounded-lg">
               <FiUsers className="h-6 w-6 text-amber-600" />

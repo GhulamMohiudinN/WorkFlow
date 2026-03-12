@@ -159,7 +159,7 @@ const handleFormData = async () => {
           const { data: workspaceData, error: workspaceError } =
             await WORKSPACE.createWorkspace({
               ...formData,
-              adminId: data.user._id,
+              ownerId: data.user._id,
             });
 
           if (workspaceError) {
