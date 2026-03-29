@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { 
   FiLayers, 
   FiPlus, 
@@ -18,14 +18,17 @@ import {
   FiHelpCircle,
   FiZap,
   FiUpload,
-  FiBell,
-  FiSettings,
-  FiEye
+  FiX,
+  FiEdit2,
+  FiEye,
+  FiCopy
 } from "react-icons/fi";
 
-export default function NewProcessPage() {
+export default function EditProcessPage() {
   const router = useRouter();
+  const { id } = useParams();
   const [activeStep, setActiveStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -36,10 +39,7 @@ export default function NewProcessPage() {
     category: "",
     visibility: "private",
     assignedTo: [],
-    steps: [
-      { id: 1, title: "Initial Review", description: "Review initial requirements", assignee: "", timeEstimate: "2 hours", order: 1, notes: "" },
-      { id: 2, title: "Approval", description: "Get manager approval", assignee: "", timeEstimate: "1 day", order: 2, notes: "" },
-    ],
+    steps: [],
     notifications: { email: true, slack: false, inApp: true },
     automation: { autoAssign: false, dueDateReminders: true, escalation: false }
   });
@@ -49,15 +49,41 @@ export default function NewProcessPage() {
     { id: 1, name: "John Doe", email: "john@company.com", role: "admin", avatar: "JD" },
     { id: 2, name: "Sarah Chen", email: "sarah@company.com", role: "editor", avatar: "SC" },
     { id: 3, name: "Mike Wilson", email: "mike@company.com", role: "viewer", avatar: "MW" },
-    { id: 4, name: "Emma Davis", email: "emma@company.com", role: "editor", avatar: "ED" }
+    { id: 4, name: "Emma Davis", email: "emma@company.com", role: "editor", avatar: "ED" },
+    { id: 5, name: "Alex Kim", email: "alex@company.com", role: "viewer", avatar: "AK" }
   ];
 
-  const steps = [
+  const stepsConfig = [
     { number: 1, title: "Basic Info", description: "Process details" },
     { number: 2, title: "Steps", description: "Define workflow steps" },
     { number: 3, title: "Assignments", description: "Assign team members" },
     { number: 4, title: "Settings", description: "Configure options" },
   ];
+
+  useEffect(() => {
+    // Simulate API call to fetch process data
+    setTimeout(() => {
+      // This would come from your API
+      const existingProcess = {
+        name: "Employee Onboarding",
+        description: "Complete onboarding process for new hires including orientation, training, and system access",
+        category: "Onboarding",
+        visibility: "private",
+        assignedTo: ["john@company.com", "sarah@company.com"],
+        steps: [
+          { id: 1, title: "Initial HR Review", description: "Review new hire paperwork and initiate background check", assignee: "john@company.com", timeEstimate: "2 hours", order: 1, notes: "Ensure all documents are signed" },
+          { id: 2, title: "IT Account Setup", description: "Create email, system accounts, and assign hardware", assignee: "sarah@company.com", timeEstimate: "4 hours", order: 2, notes: "Use automated provisioning system" },
+          { id: 3, title: "Manager Introduction", description: "Schedule meeting with team and assign mentor", assignee: "", timeEstimate: "1 hour", order: 3, notes: "Prepare welcome package" },
+          { id: 4, title: "Training Assignment", description: "Assign required training modules", assignee: "", timeEstimate: "30 min", order: 4, notes: "Based on role and department" },
+          { id: 5, title: "Equipment Setup", description: "Configure desk, phone, and hardware", assignee: "", timeEstimate: "2 hours", order: 5, notes: "Check inventory availability" }
+        ],
+        notifications: { email: true, slack: false, inApp: true },
+        automation: { autoAssign: false, dueDateReminders: true, escalation: false }
+      };
+      setFormData(existingProcess);
+      setIsLoading(false);
+    }, 1000);
+  }, [id]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -113,51 +139,28 @@ export default function NewProcessPage() {
     }
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault(); // ✅ MUST be first
-
-  if (activeStep !== steps.length) {
-    console.log("Blocked submit before final step");
-    return;
-  }
-
-  console.log("SUBMIT TRIGGERED");
-
-  setIsSubmitting(true);
-
-  setTimeout(() => {
-    setIsSubmitting(false);
-    setSuccess(true);
-    console.log("Process created:", formData);
-  }, 2000);
-};
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setSuccess(true);
+      console.log("Process updated:", formData);
+    }, 2000);
+  };
 
   const validateStep = () => {
     switch (activeStep) {
-      case 1: 
-        if (formData.name.trim() === "") {
-          alert("Please enter a process name");
-          return false;
-        }
-        if (formData.category === "") {
-          alert("Please select a category");
-          return false;
-        }
-        return true;
-      case 2: 
-        const invalidSteps = formData.steps.filter(step => step.title.trim() === "");
-        if (invalidSteps.length > 0) {
-          alert(`Please enter titles for all steps (Step ${invalidSteps[0].order} is empty)`);
-          return false;
-        }
-        return true;
-      default: 
-        return true;
+      case 1: return formData.name.trim() !== "" && formData.category !== "";
+      case 2: return formData.steps.every(step => step.title.trim() !== "");
+      default: return true;
     }
   };
 
   const handleNext = () => {
-    if (validateStep() && activeStep < steps.length) {
+    if (validateStep() && activeStep < stepsConfig.length) {
       setActiveStep(activeStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -186,7 +189,6 @@ const handleSubmit = (e) => {
                 className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                 placeholder="e.g., Employee Onboarding Process"
               />
-              <p className="text-xs text-gray-500 mt-1">Give your process a clear, descriptive name</p>
             </div>
 
             <div>
@@ -198,7 +200,7 @@ const handleSubmit = (e) => {
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows="4"
                 className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                placeholder="Describe what this process accomplishes and why it's important..."
+                placeholder="Describe what this process accomplishes..."
               />
             </div>
 
@@ -240,7 +242,7 @@ const handleSubmit = (e) => {
                     <div className={`h-3 w-3 rounded-full mr-2 ${formData.visibility === 'private' ? 'bg-amber-500' : 'bg-gray-300'}`}></div>
                     <span className="font-medium text-gray-900">Private</span>
                   </div>
-                  <p className="text-sm text-gray-600">Only assigned team members can view and manage</p>
+                  <p className="text-sm text-gray-600">Only assigned team members can view</p>
                 </div>
 
                 <div
@@ -255,7 +257,7 @@ const handleSubmit = (e) => {
                     <div className={`h-3 w-3 rounded-full mr-2 ${formData.visibility === 'public' ? 'bg-amber-500' : 'bg-gray-300'}`}></div>
                     <span className="font-medium text-gray-900">Public</span>
                   </div>
-                  <p className="text-sm text-gray-600">All workspace members can view (read-only)</p>
+                  <p className="text-sm text-gray-600">All workspace members can view</p>
                 </div>
               </div>
             </div>
@@ -268,7 +270,7 @@ const handleSubmit = (e) => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Process Steps</h3>
-                <p className="text-sm text-gray-500 mt-1">Define each step in your workflow (minimum 2 steps)</p>
+                <p className="text-sm text-gray-500 mt-1">Define each step in your workflow</p>
               </div>
               <button
                 type="button"
@@ -280,7 +282,7 @@ const handleSubmit = (e) => {
               </button>
             </div>
 
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+            <div className="space-y-4">
               {formData.steps.map((step, index) => (
                 <div key={step.id} className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all">
                   <div className="flex items-start justify-between mb-4">
@@ -320,7 +322,7 @@ const handleSubmit = (e) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Step Title <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Step Title</label>
                       <input
                         type="text"
                         value={step.title}
@@ -359,20 +361,32 @@ const handleSubmit = (e) => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Assign To (Optional)</label>
-                    <select
-                      value={step.assignee}
-                      onChange={(e) => handleStepChange(step.id, 'assignee', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="">Select team member</option>
-                      {teamMembers.map(member => (
-                        <option key={member.id} value={member.email}>
-                          {member.name} ({member.role})
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Assign To</label>
+                      <select
+                        value={step.assignee}
+                        onChange={(e) => handleStepChange(step.id, 'assignee', e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
+                      >
+                        <option value="">Select team member</option>
+                        {teamMembers.map(member => (
+                          <option key={member.id} value={member.email}>
+                            {member.name} ({member.role})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                      <input
+                        type="text"
+                        value={step.notes || ""}
+                        onChange={(e) => handleStepChange(step.id, 'notes', e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
+                        placeholder="Additional notes for this step"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -385,8 +399,8 @@ const handleSubmit = (e) => {
                   <p className="font-medium text-gray-900">Pro Tips</p>
                   <ul className="text-sm text-gray-600 mt-2 space-y-1">
                     <li>• Keep each step focused on a single task or decision</li>
-                    <li>• Use decision blocks for branching workflows</li>
-                    <li>• Add notes to provide helpful context for team members</li>
+                    <li>• Assign steps to specific roles for clarity</li>
+                    <li>• Add notes to provide helpful context</li>
                     <li>• Drag steps to reorder them as needed</li>
                   </ul>
                 </div>
@@ -467,11 +481,10 @@ const handleSubmit = (e) => {
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Process Settings</h3>
               
               <div className="space-y-6">
-                {/* Notifications Section */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <FiBell className="h-4 w-4 text-amber-500" />
-                    Notification Settings
+                    <FiBell className="h-4 w-4" />
+                    Notifications
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(formData.notifications).map(([key, value]) => (
@@ -479,9 +492,9 @@ const handleSubmit = (e) => {
                         <div>
                           <p className="font-medium text-gray-900 capitalize">{key} Notifications</p>
                           <p className="text-sm text-gray-500">
-                            {key === 'email' && 'Receive email notifications for process updates and assignments'}
-                            {key === 'slack' && 'Get notified in Slack channel when tasks are assigned or completed'}
-                            {key === 'inApp' && 'Show real-time notifications within the application'}
+                            {key === 'email' && 'Receive email notifications for process updates'}
+                            {key === 'slack' && 'Get notified in Slack channel'}
+                            {key === 'inApp' && 'Show notifications in-app'}
                           </p>
                         </div>
                         <button
@@ -505,10 +518,9 @@ const handleSubmit = (e) => {
                   </div>
                 </div>
 
-                {/* Automation Section */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <FiZap className="h-4 w-4 text-amber-500" />
+                    <FiZap className="h-4 w-4" />
                     Automation Rules
                   </h4>
                   <div className="space-y-3">
@@ -521,9 +533,9 @@ const handleSubmit = (e) => {
                              'Escalate Overdue Tasks'}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {key === 'autoAssign' && 'Automatically assign tasks to available team members based on workload'}
-                            {key === 'dueDateReminders' && 'Send automatic reminders 24 hours before tasks are due'}
-                            {key === 'escalation' && 'Escalate overdue tasks to managers and notify stakeholders'}
+                            {key === 'autoAssign' && 'Automatically assign tasks to available team members'}
+                            {key === 'dueDateReminders' && 'Send reminders before tasks are due'}
+                            {key === 'escalation' && 'Escalate overdue tasks to managers'}
                           </p>
                         </div>
                         <button
@@ -547,49 +559,29 @@ const handleSubmit = (e) => {
                   </div>
                 </div>
 
-                {/* Attachments Section */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-4">Attachments (Optional)</h4>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-amber-300 transition-colors cursor-pointer">
+                  <h4 className="font-medium text-gray-900 mb-4">Attachments</h4>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-amber-300 transition-colors">
                     <FiUpload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-600 mb-2">Drag and drop files here, or click to browse</p>
-                    <p className="text-sm text-gray-500">Supports PDF, DOC, XLS, PNG, JPG up to 10MB each</p>
-                    <button 
-                      type="button"
-                      className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                      onClick={() => alert("File upload dialog would open here")}
-                    >
+                    <p className="text-sm text-gray-500">Supports PDF, DOC, XLS up to 10MB each</p>
+                    <button className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                       Browse Files
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-3">
-                    Upload process documentation, guidelines, templates, or training materials
-                  </p>
-                </div>
-
-                {/* Review Summary */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 mt-4">
-                  <div className="flex items-start gap-3">
-                    <FiSettings className="h-5 w-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-gray-900">Ready to Create?</p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        You`re about to create <strong className="text-amber-700">{formData.name || "your process"}</strong> with 
-                        <strong> {formData.steps.length} steps</strong> assigned to 
-                        <strong> {formData.assignedTo.length} team members</strong>.
-                        {formData.automation.dueDateReminders && " Automation rules will be applied automatically."}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {formData.automation.autoAssign && (
-                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">Auto-assign ON</span>
-                        )}
-                        {formData.automation.dueDateReminders && (
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">Reminders ON</span>
-                        )}
-                        {formData.automation.escalation && (
-                          <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">Escalation ON</span>
-                        )}
+                  {/* Existing attachments would show here */}
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FiFileText className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm font-medium">onboarding_checklist.pdf</p>
+                          <p className="text-xs text-gray-500">2.4 MB • Uploaded Jan 15, 2024</p>
+                        </div>
                       </div>
+                      <button className="text-gray-400 hover:text-red-500">
+                        <FiX className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -603,6 +595,17 @@ const handleSubmit = (e) => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading process data...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="py-6">
@@ -610,38 +613,21 @@ const handleSubmit = (e) => {
           <div className="bg-green-100 rounded-full p-4 w-fit mx-auto mb-4">
             <FiCheck className="h-12 w-12 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Process Created Successfully!</h2>
-          <p className="text-gray-600 mb-6">{formData.name} has been created with {formData.steps.length} steps</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Process Updated!</h2>
+          <p className="text-gray-600 mb-6">{formData.name} has been updated successfully</p>
           <div className="flex space-x-3 justify-center">
             <Link
-              href="/processes"
+              href={`/processes/${id}`}
               className="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all shadow-md"
             >
-              View All Processes
+              View Process
             </Link>
-            <button
-            type="button"
-              onClick={() => {
-                setSuccess(false);
-                setActiveStep(1);
-                setFormData({
-                  name: "",
-                  description: "",
-                  category: "",
-                  visibility: "private",
-                  assignedTo: [],
-                  steps: [
-                    { id: 1, title: "Initial Review", description: "Review initial requirements", assignee: "", timeEstimate: "2 hours", order: 1, notes: "" },
-                    { id: 2, title: "Approval", description: "Get manager approval", assignee: "", timeEstimate: "1 day", order: 2, notes: "" },
-                  ],
-                  notifications: { email: true, slack: false, inApp: true },
-                  automation: { autoAssign: false, dueDateReminders: true, escalation: false }
-                });
-              }}
+            <Link
+              href="/processes"
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all"
             >
-              Create Another Process
-            </button>
+              Back to Processes
+            </Link>
           </div>
         </div>
       </div>
@@ -654,26 +640,27 @@ const handleSubmit = (e) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <Link
-            href="/processes"
+            href={`/processes/${id}`}
             className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
           >
             <FiArrowLeft className="h-5 w-5 mr-2" />
-            Back to Processes
+            Back to Process
           </Link>
           <div className="h-8 w-px bg-gray-300"></div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create New Process</h1>
-            <p className="text-gray-600 mt-1">Build your workflow step by step</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Edit Process</h1>
+            <p className="text-gray-600 mt-1">Update your workflow configuration</p>
           </div>
         </div>
-        <button
-        type="button"
-          onClick={() => setShowPreview(!showPreview)}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all flex items-center gap-2"
-        >
-          <FiEye className="h-4 w-4" />
-          {showPreview ? 'Hide Preview' : 'Show Preview'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all flex items-center gap-2"
+          >
+            <FiEye className="h-4 w-4" />
+            {showPreview ? 'Hide Preview' : 'Show Preview'}
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -684,16 +671,16 @@ const handleSubmit = (e) => {
             <div className="px-6 py-4 border-b border-amber-100 bg-gradient-to-r from-gray-50 to-white">
               <div className="flex justify-between items-center mb-2">
                 <div className="text-sm font-medium text-gray-900">
-                  Step {activeStep} of {steps.length}: {steps.find(s => s.number === activeStep)?.title}
+                  Step {activeStep} of {stepsConfig.length}: {stepsConfig.find(s => s.number === activeStep)?.title}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {steps.find(s => s.number === activeStep)?.description}
+                  {stepsConfig.find(s => s.number === activeStep)?.description}
                 </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${((activeStep - 1) / (steps.length - 1)) * 100}%` }}
+                  style={{ width: `${((activeStep - 1) / (stepsConfig.length - 1)) * 100}%` }}
                 ></div>
               </div>
             </div>
@@ -701,7 +688,7 @@ const handleSubmit = (e) => {
             {/* Step Indicators */}
             <div className="px-6 py-4 border-b border-amber-100 bg-white">
               <div className="flex justify-between">
-                {steps.map((step) => (
+                {stepsConfig.map((step) => (
                   <div key={step.number} className="flex flex-col items-center">
                     <div 
                       className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 cursor-pointer transition-all ${
@@ -727,8 +714,7 @@ const handleSubmit = (e) => {
 
             {/* Form Content */}
             <div className="p-6">
-              <form 
-              >
+              <form onSubmit={handleSubmit}>
                 {renderStepContent()}
 
                 {/* Navigation Buttons */}
@@ -747,22 +733,21 @@ const handleSubmit = (e) => {
                     Previous
                   </button>
 
-                  {activeStep === steps.length ? (
+                  {activeStep === stepsConfig.length ? (
                     <button
-                      type="button"
-                       onClick={handleSubmit}
+                      type="submit"
                       disabled={isSubmitting}
                       className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
                     >
                       {isSubmitting ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Creating Process...
+                          Updating Process...
                         </>
                       ) : (
                         <>
                           <FiSave className="w-4 h-4" />
-                          Create Process
+                          Update Process
                         </>
                       )}
                     </button>
@@ -828,7 +813,7 @@ const handleSubmit = (e) => {
 
                 <div className="pt-3 border-t border-gray-200">
                   <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">Steps Preview</h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {formData.steps.slice(0, 4).map((step) => (
                       <div key={step.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-lg">
                         <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
@@ -854,14 +839,8 @@ const handleSubmit = (e) => {
                       <p className="text-sm font-semibold text-gray-900">AI Ready</p>
                     </div>
                     <p className="text-xs text-gray-600">
-                      After creation, AI will analyze your workflow and suggest:
+                      After saving, AI will analyze your workflow and suggest optimizations
                     </p>
-                    <ul className="text-xs text-gray-600 mt-2 space-y-1 list-disc list-inside">
-                      <li>Optimization opportunities</li>
-                      <li>Automation suggestions</li>
-                      <li>Bottleneck detection</li>
-                      <li>Cost reduction ideas</li>
-                    </ul>
                   </div>
                 </div>
               </div>
@@ -873,11 +852,19 @@ const handleSubmit = (e) => {
   );
 }
 
-// Helper component for Bell icon
-// function FiBell(props) {
-//   return (
-//     <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-//       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-//     </svg>
-//   );
-// }
+// Helper component
+function FiBell(props) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  );
+}
+
+function FiFileText(props) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}

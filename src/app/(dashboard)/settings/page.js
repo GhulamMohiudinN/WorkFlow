@@ -130,6 +130,9 @@ export default function SettingsPage() {
       
       fetchSettings();
     }
+     else {
+    setLoading(false);
+  }
   }, [workspace?._id]);
 
   const tabs = [
