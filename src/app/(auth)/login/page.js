@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { loginSchema } from "../../formValidationScheme/authSchema";
-import AUTH from "../../axios/auth";
-import toast, { Toaster } from 'react-hot-toast';
+import authAPI from "../../api/auth";
+import toast, { Toaster } from "react-hot-toast";
 import {
   FiEye,
   FiEyeOff,
@@ -21,40 +21,36 @@ import {
   FiZap,
   FiBriefcase,
   FiCheckCircle,
-  FiCpu
+  FiCpu,
 } from "react-icons/fi";
-import { useUserStore, useWorkspaceStore } from "../../store";
-
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const router = useRouter();
-  const {setUser} = useUserStore()
-  const {setWorkspace} = useWorkspaceStore()
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm({
-    resolver: yupResolver(loginSchema)
+    resolver: yupResolver(loginSchema),
   });
 
   const handleLogin = async (formData) => {
     setLoading(true);
-    const {data, error } = await AUTH.login(formData);
-    if (error) {
-      toast.error("Invalid email address or password");
+    setError(null);
+    try {
+      await authAPI.login(formData);
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+      toast.error(err.message || "Login failed. Please try again.");
+    } finally {
       setLoading(false);
     }
-    localStorage.setItem("accessToken", data.tokens.access.token);
-    {rememberMe && localStorage.setItem("refreshToken", data.tokens.refresh.token)}
-    setUser(data.user)
-    setWorkspace(data.workspace[0])
-    setLoading(false);
-    router.push("/dashboard");
-   
   };
 
   return (
@@ -93,7 +89,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" >
+          <form className="mt-8 space-y-6">
             <div>
               <label
                 htmlFor="email"
@@ -112,7 +108,9 @@ export default function LoginPage() {
                   placeholder="your@company.com"
                 />
               </div>
-              <p className="text-red-500 text-sm mt-2">{errors.email?.message}</p>
+              <p className="text-red-500 text-sm mt-2">
+                {errors.email?.message}
+              </p>
             </div>
 
             <div>
@@ -134,7 +132,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                 />
                 <button
-                type="button"
+                  type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -145,8 +143,9 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-              <p className="text-red-500 text-sm mt-2">{errors.password?.message}</p>
-
+              <p className="text-red-500 text-sm mt-2">
+                {errors.password?.message}
+              </p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -159,14 +158,20 @@ export default function LoginPage() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                <label
+                  htmlFor="remember-me"
+                  className="ml-2 block text-sm text-gray-700"
+                >
                   Remember me
                 </label>
               </div>
               <div className="text-sm">
-                <a href="#" className="font-medium text-amber-600 hover:text-amber-500">
+                <Link
+                  href="/forgot-password"
+                  className="font-medium text-amber-600 hover:text-amber-500"
+                >
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -194,10 +199,17 @@ export default function LoginPage() {
               </button>
             </div>
 
+            {error && (
+              <p className="text-red-500 text-sm text-center mt-2">{error}</p>
+            )}
+
             <div className="text-center">
               <p className="text-xs text-gray-500">
                 Don`t have an account?{" "}
-                <Link href="/signup" className="font-medium text-amber-600 hover:text-amber-500">
+                <Link
+                  href="/signup"
+                  className="font-medium text-amber-600 hover:text-amber-500"
+                >
                   Request enterprise access
                 </Link>
               </p>
@@ -216,8 +228,12 @@ export default function LoginPage() {
                 <FiBriefcase className="w-10 h-10 text-amber-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">WorkflowPro</h1>
-                <p className="text-amber-600 font-medium text-sm mt-1">Enterprise Workflow Management</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  WorkflowPro
+                </h1>
+                <p className="text-amber-600 font-medium text-sm mt-1">
+                  Enterprise Workflow Management
+                </p>
               </div>
             </div>
 
@@ -237,8 +253,12 @@ export default function LoginPage() {
                   <FiUsers className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Team Management</h4>
-                  <p className="text-xs text-gray-600">Add team members and manage permissions</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    Team Management
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Add team members and manage permissions
+                  </p>
                 </div>
               </div>
 
@@ -247,8 +267,12 @@ export default function LoginPage() {
                   <FiLayers className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Visual Builder</h4>
-                  <p className="text-xs text-gray-600">Drag-and-drop workflow creation</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    Visual Builder
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Drag-and-drop workflow creation
+                  </p>
                 </div>
               </div>
 
@@ -257,8 +281,12 @@ export default function LoginPage() {
                   <FiTrendingUp className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Analytics</h4>
-                  <p className="text-xs text-gray-600">Monitor performance and productivity</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    Analytics
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Monitor performance and productivity
+                  </p>
                 </div>
               </div>
 
@@ -267,8 +295,12 @@ export default function LoginPage() {
                   <FiZap className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">AI Automation</h4>
-                  <p className="text-xs text-gray-600">Smart workflow optimization</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    AI Automation
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Smart workflow optimization
+                  </p>
                 </div>
               </div>
             </div>

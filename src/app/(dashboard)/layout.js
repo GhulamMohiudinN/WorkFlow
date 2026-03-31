@@ -1,8 +1,9 @@
 "use client";
 import { useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useWorkspaceStore, useUserStore } from "../store";
-import {socket} from "../utils/socket";
+import { socket } from "../utils/socket";
+import api from "../api/axios";
+
 import {
   FiMenu,
   FiX,
@@ -17,64 +18,137 @@ import {
   FiChevronDown,
   FiBarChart2,
   FiHelpCircle,
-  FiGlobe
+  FiGlobe,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import Link from "next/link";
-import AUTH from "../axios/auth";
 
+export const dynamic = "force-dynamic";
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const {workspace, role, clearWorkspace, setWorkspace} = useWorkspaceStore();
-  const {user} = useUserStore();
+  const [isClient, setIsClient] = useState(false);
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const {clearUser} = useUserStore();
   const pathname = usePathname();
 
-  const signout = async () => {
-    router.push('/');
-    AUTH.logout();
-    clearWorkspace();
-    clearUser();
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // connected with socket.io
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        socket.emit("register", userId);
+      }
+    }
+  }, []);
+
+  // update workspaceIfMember is added in workspace
+  useEffect(() => {
+    // Removed socket listener since we removed store
+  }, []);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Since no profile API, load from localStorage
+        const storedUser = localStorage.getItem("user");
+        const storedRole = localStorage.getItem("role");
+        const storedWorkspace = localStorage.getItem("workspace");
+
+        if (storedUser && storedRole && storedWorkspace) {
+          setUser(JSON.parse(storedUser));
+          setRole(storedRole);
+          setWorkspace(JSON.parse(storedWorkspace));
+        } else {
+          // If not found, redirect to login
+          router.push("/login");
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error("Error loading user data:", err);
+        router.push("/login");
+        setLoading(false);
+      }
+    };
+
+    if (isClient) {
+      fetchUserData();
+    }
+  }, [isClient, router]);
+
+  if (!isClient || loading) {
+    return null; // Prevent SSR and show loading
+  }
+
+  if (!user || !workspace) {
+    return null; // Or show error
+  }
+
+  const signout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("role");
+    localStorage.removeItem("workspace");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userId");
+    setUser(null);
+    setRole(null);
+    setWorkspace(null);
+    router.push("/login");
   };
 
-   // connected with socket.io 
-  useMemo(() => {
-    if (user?._id) {
-      socket.emit("register", user?._id);
-    }
-  }, [user?._id]);
-
-  // update workspaceIfMember is added in workspace 
-  useEffect(() => {
-    socket.on(`workspace:${workspace?._id}:memberAdded`, (newMember) => {
-      console.log("New member added:", newMember);
-       setWorkspace(newMember);
-    });
-
-    return () => {
-      socket.off(`workspace:${workspace?._id}:memberAdded`);
-    };
-  }, [workspace]);
-  
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: FiHome, current: pathname === '/dashboard' },
-    { name: 'Company', href: 'company', icon: FaBuilding, current: pathname === '/company' },
-    { name: 'Processes', href: 'processes', icon: FiLayers, current: pathname === '/processes' },
-    { name: 'Users', href: 'users', icon: FiUsers, current: pathname === '/users' },
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: FiHome,
+      current: pathname === "/dashboard",
+    },
+    {
+      name: "Company",
+      href: "company",
+      icon: FaBuilding,
+      current: pathname === "/company",
+    },
+    {
+      name: "Processes",
+      href: "processes",
+      icon: FiLayers,
+      current: pathname === "/processes",
+    },
+    {
+      name: "Users",
+      href: "users",
+      icon: FiUsers,
+      current: pathname === "/users",
+    },
     // { name: 'Analytics', href: '/dashboard/analytics', icon: FiBarChart2, current: pathname === '/dashboard/analytics' },
-    { name: 'Settings', href: '/settings', icon: FiSettings, current: pathname === '/settings' },
+    {
+      name: "Settings",
+      href: "/settings",
+      icon: FiSettings,
+      current: pathname === "/settings",
+    },
   ];
-
-
 
   return (
     <div className="min-h-screen bg-linear-to-b from-amber-50 to-white">
       {/* Mobile sidebar */}
-      <div className={`lg:hidden ${sidebarOpen ? 'fixed inset-0 z-50' : 'hidden'}`}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+      <div
+        className={`lg:hidden ${sidebarOpen ? "fixed inset-0 z-50" : "hidden"}`}
+      >
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-75"
+          onClick={() => setSidebarOpen(false)}
+        />
         <div className="fixed inset-y-0 left-0 flex flex-col w-64 bg-white shadow-xl">
           <div className="flex items-center justify-between h-16 px-4 border-b border-amber-100">
             <div className="flex items-center space-x-3">
@@ -96,12 +170,14 @@ export default function DashboardLayout({ children }) {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg ${
-                  item.current 
-                    ? 'text-amber-600 bg-amber-50' 
-                    : 'text-gray-700 hover:text-amber-600 hover:bg-amber-50'
+                  item.current
+                    ? "text-amber-600 bg-amber-50"
+                    : "text-gray-700 hover:text-amber-600 hover:bg-amber-50"
                 }`}
               >
-                <item.icon className={`mr-3 h-5 w-5 ${item.current ? 'text-amber-500' : 'text-gray-400'}`} />
+                <item.icon
+                  className={`mr-3 h-5 w-5 ${item.current ? "text-amber-500" : "text-gray-400"}`}
+                />
                 {item.name}
               </a>
             ))}
@@ -116,7 +192,9 @@ export default function DashboardLayout({ children }) {
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">{workspace?.companyEmail}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {workspace?.companyEmail}
+                </p>
                 <p className="text-xs text-gray-500">{role}</p>
               </div>
             </div>
@@ -133,7 +211,9 @@ export default function DashboardLayout({ children }) {
                 <FiBriefcase className="h-6 w-6 text-white" />
               </div>
               <span className="font-bold text-gray-900">WorkflowPro</span>
-              <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">BETA</span>
+              <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">
+                BETA
+              </span>
             </div>
           </div>
           <div className="flex-1 flex flex-col pt-6 pb-4 overflow-y-auto">
@@ -143,14 +223,16 @@ export default function DashboardLayout({ children }) {
                   key={item.name}
                   href={item.href}
                   className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    item.current 
-                      ? 'text-amber-600 bg-amber-50' 
-                      : 'text-gray-700 hover:text-amber-600 hover:bg-amber-50'
+                    item.current
+                      ? "text-amber-600 bg-amber-50"
+                      : "text-gray-700 hover:text-amber-600 hover:bg-amber-50"
                   }`}
                 >
-                  <item.icon className={`mr-3 h-5 w-5 transition-colors ${
-                    item.current ? 'text-amber-500' : 'text-gray-400'
-                  }`} />
+                  <item.icon
+                    className={`mr-3 h-5 w-5 transition-colors ${
+                      item.current ? "text-amber-500" : "text-gray-400"
+                    }`}
+                  />
                   {item.name}
                 </a>
               ))}
@@ -160,8 +242,15 @@ export default function DashboardLayout({ children }) {
                 <div className="flex items-center">
                   <FiHelpCircle className="h-5 w-5 text-amber-600 mr-3" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Need help?</p>
-                    <a href="#" className="text-xs text-amber-600 hover:text-amber-700">View documentation</a>
+                    <p className="text-sm font-medium text-gray-900">
+                      Need help?
+                    </p>
+                    <a
+                      href="#"
+                      className="text-xs text-amber-600 hover:text-amber-700"
+                    >
+                      View documentation
+                    </a>
                   </div>
                 </div>
               </div>
@@ -196,7 +285,7 @@ export default function DashboardLayout({ children }) {
                   <FiBell className="h-6 w-6" />
                   <span className="absolute top-1 right-1 h-2 w-2 bg-amber-500 rounded-full"></span>
                 </button>
-                
+
                 {/* User menu */}
                 <div className="relative">
                   <button
@@ -211,12 +300,14 @@ export default function DashboardLayout({ children }) {
                       </div>
                     </div>
                     <div className="hidden md:block text-left">
-                      <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {user?.email}
+                      </p>
                       <p className="text-xs text-gray-500">{role}</p>
                     </div>
                     <FiChevronDown className="h-5 w-5 text-gray-400" />
                   </button>
-                  
+
                   {userMenuOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                       <a
@@ -251,9 +342,7 @@ export default function DashboardLayout({ children }) {
 
         {/* Main content area */}
         <main className="py-6">
-          <div className="px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
+          <div className="px-4 sm:px-6 lg:px-8">{children}</div>
         </main>
 
         {/* Footer */}
@@ -268,7 +357,8 @@ export default function DashboardLayout({ children }) {
               </div>
               <div className="mt-2 md:mt-0">
                 <p className="text-xs text-gray-400">
-                  Powered by MongoDB • Enterprise Security • {new Date().getFullYear()}
+                  Powered by MongoDB • Enterprise Security •{" "}
+                  {new Date().getFullYear()}
                 </p>
               </div>
             </div>

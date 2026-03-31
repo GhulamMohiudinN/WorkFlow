@@ -1,22 +1,31 @@
 "use client";
-import { useState } from "react";
-import { 
-  FiGlobe, 
-  FiUsers, 
-  FiMapPin, 
-  FiCalendar, 
+export const dynamic = "force-dynamic";
+import { useState, useEffect } from "react";
+import {
+  FiGlobe,
+  FiUsers,
+  FiMapPin,
+  FiCalendar,
   FiEdit2,
   FiSave,
   FiX,
   FiShield,
   FiDatabase,
-  FiTrendingUp
+  FiTrendingUp,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 
 export default function CompanyPage() {
-  const [isEditing, setIsEditing] = useState(false);
-  
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null; // or a loading spinner
+  }
+
   // Dummy company data
   const [company, setCompany] = useState({
     name: "TechFlow Inc",
@@ -25,10 +34,11 @@ export default function CompanyPage() {
     industry: "Technology & Software",
     foundedYear: "2018",
     location: "San Francisco, CA",
-    description: "Leading provider of workflow automation solutions for modern enterprises.",
+    description:
+      "Leading provider of workflow automation solutions for modern enterprises.",
     teamSize: "50-100",
     subscription: "Enterprise Plan",
-    status: "Active"
+    status: "Active",
   });
 
   const handleSave = () => {
@@ -38,14 +48,34 @@ export default function CompanyPage() {
   };
 
   const handleInputChange = (field, value) => {
-    setCompany(prev => ({ ...prev, [field]: value }));
+    setCompany((prev) => ({ ...prev, [field]: value }));
   };
 
   const stats = [
-    { label: "Total Members", value: "8", icon: FiUsers, color: "bg-blue-100 text-blue-600" },
-    { label: "Active Processes", value: "12", icon: FiTrendingUp, color: "bg-green-100 text-green-600" },
-    { label: "Storage Used", value: "1.2GB", icon: FiDatabase, color: "bg-purple-100 text-purple-600" },
-    { label: "Days Active", value: "45", icon: FiCalendar, color: "bg-amber-100 text-amber-600" },
+    {
+      label: "Total Members",
+      value: "8",
+      icon: FiUsers,
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      label: "Active Processes",
+      value: "12",
+      icon: FiTrendingUp,
+      color: "bg-green-100 text-green-600",
+    },
+    {
+      label: "Storage Used",
+      value: "1.2GB",
+      icon: FiDatabase,
+      color: "bg-purple-100 text-purple-600",
+    },
+    {
+      label: "Days Active",
+      value: "45",
+      icon: FiCalendar,
+      color: "bg-amber-100 text-amber-600",
+    },
   ];
 
   return (
@@ -54,7 +84,9 @@ export default function CompanyPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
-          <p className="text-gray-600 mt-2">Manage your company information and settings</p>
+          <p className="text-gray-600 mt-2">
+            Manage your company information and settings
+          </p>
         </div>
         <div className="mt-4 md:mt-0">
           {isEditing ? (
@@ -89,11 +121,18 @@ export default function CompanyPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
+          <div
+            key={index}
+            className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {stat.label}
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">
+                  {stat.value}
+                </p>
               </div>
               <div className={`p-3 rounded-lg ${stat.color}`}>
                 <stat.icon className="h-6 w-6" />
@@ -108,7 +147,9 @@ export default function CompanyPage() {
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
             <div className="px-6 py-4 border-b border-amber-100">
-              <h2 className="text-lg font-semibold text-gray-900">Company Information</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Company Information
+              </h2>
             </div>
             <div className="p-6">
               <div className="space-y-6">
@@ -121,7 +162,9 @@ export default function CompanyPage() {
                       <input
                         type="text"
                         value={company.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("name", e.target.value)
+                        }
                         className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       />
                     ) : (
@@ -140,7 +183,9 @@ export default function CompanyPage() {
                       <input
                         type="email"
                         value={company.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
                         className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       />
                     ) : (
@@ -159,13 +204,18 @@ export default function CompanyPage() {
                       <input
                         type="url"
                         value={company.website}
-                        onChange={(e) => handleInputChange('website', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("website", e.target.value)
+                        }
                         className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       />
                     ) : (
                       <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                         <FiGlobe className="h-5 w-5 text-gray-400 mr-3" />
-                        <a href={company.website} className="text-amber-600 hover:text-amber-700">
+                        <a
+                          href={company.website}
+                          className="text-amber-600 hover:text-amber-700"
+                        >
                           {company.website}
                         </a>
                       </div>
@@ -180,12 +230,16 @@ export default function CompanyPage() {
                       <input
                         type="text"
                         value={company.industry}
-                        onChange={(e) => handleInputChange('industry', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("industry", e.target.value)
+                        }
                         className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       />
                     ) : (
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-900">{company.industry}</span>
+                        <span className="text-gray-900">
+                          {company.industry}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -198,13 +252,17 @@ export default function CompanyPage() {
                       <input
                         type="text"
                         value={company.foundedYear}
-                        onChange={(e) => handleInputChange('foundedYear', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("foundedYear", e.target.value)
+                        }
                         className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       />
                     ) : (
                       <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                         <FiCalendar className="h-5 w-5 text-gray-400 mr-3" />
-                        <span className="text-gray-900">{company.foundedYear}</span>
+                        <span className="text-gray-900">
+                          {company.foundedYear}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -217,13 +275,17 @@ export default function CompanyPage() {
                       <input
                         type="text"
                         value={company.location}
-                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("location", e.target.value)
+                        }
                         className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       />
                     ) : (
                       <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                         <FiMapPin className="h-5 w-5 text-gray-400 mr-3" />
-                        <span className="text-gray-900">{company.location}</span>
+                        <span className="text-gray-900">
+                          {company.location}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -236,7 +298,9 @@ export default function CompanyPage() {
                   {isEditing ? (
                     <textarea
                       value={company.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("description", e.target.value)
+                      }
                       rows="3"
                       className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                     />
@@ -256,13 +320,17 @@ export default function CompanyPage() {
           {/* Subscription Status */}
           <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
             <div className="px-6 py-4 border-b border-amber-100">
-              <h2 className="text-lg font-semibold text-gray-900">Subscription</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Subscription
+              </h2>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Current Plan</span>
-                  <span className="font-medium text-gray-900">{company.subscription}</span>
+                  <span className="font-medium text-gray-900">
+                    {company.subscription}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Status</span>
@@ -272,7 +340,9 @@ export default function CompanyPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Team Size</span>
-                  <span className="font-medium text-gray-900">{company.teamSize}</span>
+                  <span className="font-medium text-gray-900">
+                    {company.teamSize}
+                  </span>
                 </div>
                 <button className="w-full mt-4 py-3 bg-linear-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-200">
                   Upgrade Plan
@@ -293,8 +363,12 @@ export default function CompanyPage() {
                     <FiShield className="h-5 w-5 text-amber-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Enterprise Security</p>
-                    <p className="text-sm text-gray-600">All data encrypted at rest</p>
+                    <p className="font-medium text-gray-900">
+                      Enterprise Security
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      All data encrypted at rest
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -303,7 +377,9 @@ export default function CompanyPage() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">MongoDB Backend</p>
-                    <p className="text-sm text-gray-600">Secure database infrastructure</p>
+                    <p className="text-sm text-gray-600">
+                      Secure database infrastructure
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -311,8 +387,12 @@ export default function CompanyPage() {
                     <FiUsers className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Role-Based Access</p>
-                    <p className="text-sm text-gray-600">Fine-grained permissions</p>
+                    <p className="font-medium text-gray-900">
+                      Role-Based Access
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Fine-grained permissions
+                    </p>
                   </div>
                 </div>
               </div>

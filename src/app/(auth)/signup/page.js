@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { signupSchema } from "../../formValidationScheme/authSchema";
+import { useDispatch, useSelector } from "react-redux";
+import { signupUser, clearError } from "../../store/slices/authSlice";
 
 import {
   FiEye,
@@ -21,44 +23,41 @@ import {
   FiCheckCircle,
   FiCpu,
   FiUserPlus,
-  FiGlobe
+  FiGlobe,
+  FiUser,
 } from "react-icons/fi";
-import AUTH from "../../axios/auth";
-import toast, { Toaster } from 'react-hot-toast';
-
+import toast, { Toaster } from "react-hot-toast";
 
 export default function SignupPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.auth);
+
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm({
-    resolver: yupResolver(signupSchema)
+    resolver: yupResolver(signupSchema),
   });
-  const handleSignup = async (formData) => {
-    const { email, password } = formData;
-    setLoading(true);
-    const { error } = await AUTH.sendVerificationEmail({ email, password });
 
-    if (error) {
-      toast.error("Email already in use. Try another one.", {
-        duration: 4000,
-        position: 'top-right',
-      });
-    } else {
-       const data = { email, password };
-      sessionStorage.setItem("userData", JSON.stringify(data));
+  const onSubmit = async (formData) => {
+    try {
+      const result = await dispatch(signupUser(formData)).unwrap();
+      toast.success(
+        "Account created successfully! Please check your email for verification.",
+        {
+          duration: 4000,
+          position: "top-right",
+        },
+      );
       router.push(`/emailVerfication`);
+    } catch (error) {
+      toast.error(error || "Signup failed. Please try again.");
     }
-    setLoading(false);
   };
 
   return (
@@ -90,20 +89,48 @@ export default function SignupPage() {
               <div className="bg-amber-100 p-2 rounded-lg">
                 <FiUserPlus className="h-6 w-6 text-amber-600" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Create Account
+              </h2>
             </div>
             <p className="mt-2 text-sm text-gray-600">
               Start your enterprise workflow management journey
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit(handleSignup)}>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Full Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiUser className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  {...register("name")}
+                  autoComplete="name"
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  placeholder="John Doe"
+                />
+              </div>
+              <p className="text-red-500 text-sm mt-2">
+                {errors.name?.message}
+              </p>
+            </div>
+
             <div>
               <label
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Company Email Address
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -115,13 +142,13 @@ export default function SignupPage() {
                   type="email"
                   {...register("email")}
                   autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                  placeholder="company@example.com"
+                  placeholder="john@example.com"
                 />
               </div>
-              <p className="text-red-500 text-sm mt-2">{errors.email?.message}</p>
+              <p className="text-red-500 text-sm mt-2">
+                {errors.email?.message}
+              </p>
             </div>
 
             <div>
@@ -141,8 +168,6 @@ export default function SignupPage() {
                   {...register("password")}
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="Minimum 8 characters"
                 />
@@ -161,7 +186,9 @@ export default function SignupPage() {
               <p className="mt-1 text-xs text-gray-500">
                 Password must contain at least 1 letter and 1 number
               </p>
-              <p className="text-red-500 text-sm mt-2">{errors.password?.message}</p>
+              <p className="text-red-500 text-sm mt-2">
+                {errors.password?.message}
+              </p>
             </div>
 
             <div>
@@ -181,8 +208,6 @@ export default function SignupPage() {
                   type={showConfirmPassword ? "text" : "password"}
                   {...register("confirmPassword")}
                   autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   placeholder="Re-enter your password"
                 />
@@ -198,7 +223,9 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              <p className="text-red-500 text-sm mt-2">{errors.confirmPassword?.message}</p>
+              <p className="text-red-500 text-sm mt-2">
+                {errors.confirmPassword?.message}
+              </p>
             </div>
 
             <div className="flex items-start">
@@ -217,11 +244,17 @@ export default function SignupPage() {
               <div className="ml-3 text-sm">
                 <label htmlFor="terms" className="text-gray-700">
                   I agree to the{" "}
-                  <a href="#" className="font-medium text-amber-600 hover:text-amber-500">
+                  <a
+                    href="#"
+                    className="font-medium text-amber-600 hover:text-amber-500"
+                  >
                     Terms of Service
                   </a>{" "}
                   and{" "}
-                  <a href="#" className="font-medium text-amber-600 hover:text-amber-500">
+                  <a
+                    href="#"
+                    className="font-medium text-amber-600 hover:text-amber-500"
+                  >
                     Privacy Policy
                   </a>
                 </label>
@@ -258,7 +291,10 @@ export default function SignupPage() {
             <div className="text-center">
               <p className="text-xs text-gray-500">
                 Already have an account?{" "}
-                <Link href="/login" className="font-medium text-amber-600 hover:text-amber-500">
+                <Link
+                  href="/login"
+                  className="font-medium text-amber-600 hover:text-amber-500"
+                >
                   Sign in to your workspace
                 </Link>
               </p>
@@ -269,7 +305,9 @@ export default function SignupPage() {
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">For enterprise clients</span>
+                <span className="px-2 bg-white text-gray-500">
+                  For enterprise clients
+                </span>
               </div>
             </div>
 
@@ -297,8 +335,12 @@ export default function SignupPage() {
                 <FiBriefcase className="w-10 h-10 text-amber-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">WorkflowPro</h1>
-                <p className="text-amber-600 font-medium text-sm mt-1">Enterprise Workflow Platform</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  WorkflowPro
+                </h1>
+                <p className="text-amber-600 font-medium text-sm mt-1">
+                  Enterprise Workflow Platform
+                </p>
               </div>
             </div>
 
@@ -318,8 +360,12 @@ export default function SignupPage() {
                   <FiCheckCircle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Get Started in Minutes</h4>
-                  <p className="text-xs text-gray-600">Set up your company workspace instantly</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    Get Started in Minutes
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Set up your company workspace instantly
+                  </p>
                 </div>
               </div>
 
@@ -328,8 +374,12 @@ export default function SignupPage() {
                   <FiUsers className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Unlimited Team Members</h4>
-                  <p className="text-xs text-gray-600">Add your entire team with role-based access</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    Unlimited Team Members
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Add your entire team with role-based access
+                  </p>
                 </div>
               </div>
 
@@ -338,8 +388,12 @@ export default function SignupPage() {
                   <FiLayers className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Unlimited Workflows</h4>
-                  <p className="text-xs text-gray-600">Create as many processes as you need</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    Unlimited Workflows
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Create as many processes as you need
+                  </p>
                 </div>
               </div>
 
@@ -348,8 +402,12 @@ export default function SignupPage() {
                   <FiZap className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">AI-Powered Insights</h4>
-                  <p className="text-xs text-gray-600">Get smart suggestions to optimize workflows</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">
+                    AI-Powered Insights
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Get smart suggestions to optimize workflows
+                  </p>
                 </div>
               </div>
             </div>

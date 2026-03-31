@@ -1,25 +1,60 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { 
-  FiMail, 
-  FiCheckCircle, 
-  FiClock, 
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { authAPI } from "../../api/auth";
+
+export const dynamic = "force-dynamic";
+import {
+  FiMail,
+  FiCheckCircle,
+  FiClock,
   FiArrowLeft,
   FiRefreshCw,
   FiAlertCircle,
-  FiShield
+  FiShield,
 } from "react-icons/fi";
-import AUTH from "../../axios/auth";
-import toast, { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from "react-hot-toast";
 
-
-export default function EmailVerificationPage() {
+function EmailVerificationContent() {
   const [countdown, setCountdown] = useState(60);
   const [resending, setResending] = useState(false);
-  const userData = JSON.parse(sessionStorage.getItem("userData"));
+  const [userData, setUserData] = useState(null);
+  const [verifying, setVerifying] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
+  useEffect(() => {
+    const data = JSON.parse(sessionStorage.getItem("userData"));
+    setUserData(data);
+
+    // Auto-verify if token is present in URL
+    if (token) {
+      handleVerifyEmail(token);
+    }
+  }, [token]);
+
+  const handleVerifyEmail = async (verificationToken) => {
+    try {
+      setVerifying(true);
+      const data = await authAPI.verifyEmail(verificationToken);
+      toast.success(
+        data?.message ||
+          "Email verified successfully! Redirecting to workspace setup...",
+      );
+      sessionStorage.removeItem("userData");
+      setTimeout(() => {
+        router.push(`/workspaceCreation?token=${verificationToken}`);
+      }, 1500);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Verification failed. Please try again.",
+      );
+      setVerifying(false);
+    }
+  };
 
   useMemo(() => {
     if (countdown > 0) {
@@ -29,37 +64,32 @@ export default function EmailVerificationPage() {
   }, [countdown]);
 
   const handleResendEmail = async () => {
-  // Prevent resending while countdown is active
-  if (countdown > 0) return;
+    // Prevent resending while countdown is active
+    if (countdown > 0) return;
 
-  try {
-    setResending(true); // start resending animation
-
-    const { error } = await AUTH.sendVerificationEmail(userData);
-
-    if (error) {
-      toast.error("Something went wrong! Please try again.");
-      router.push('/signup');
-    } else {
-      toast.success("Verification email sent successfully!");
-
-      setTimeout(() => {
-        setCountdown(60); 
-        setResending(false);
-      }, 1500);
+    try {
+      setResending(true);
+      if (userData?.email) {
+        await authAPI.resendVerification(userData.email);
+        toast.success("Verification email sent successfully!");
+      } else {
+        toast.error("Email not found. Please signup again.");
+        router.push("/signup");
+        return;
+      }
+      setCountdown(60);
+      setResending(false);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to resend email. Try again.",
+      );
+      setResending(false);
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("Unexpected error occurred!");
-    setResending(false);
-  }finally{
-    setResending(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-b from-amber-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <Toaster duration={4000} position= {'top-right'}/>
+      <Toaster duration={4000} position={"top-right"} />
       {/* Back Button */}
       <div className="absolute top-6 left-6">
         <button
@@ -90,19 +120,20 @@ export default function EmailVerificationPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-3">
               Verify Your Email
             </h2>
-            
+
             <div className="space-y-4">
-              <p className="text-gray-600">
-                We've sent a verification link to
-              </p>
-              
+              <p className="text-gray-600">We've sent a verification link to</p>
+
               <div className="inline-flex items-center bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
                 <FiMail className="h-5 w-5 text-amber-500 mr-2" />
-                <span className="font-medium text-gray-800">{userData?.email}</span>
+                <span className="font-medium text-gray-800">
+                  {userData?.email}
+                </span>
               </div>
-              
+
               <p className="text-gray-600 text-sm">
-                Click the link in the email to verify your account and access your workspace.
+                Click the link in the email to verify your account and access
+                your workspace.
               </p>
             </div>
 
@@ -114,7 +145,9 @@ export default function EmailVerificationPage() {
                 </div>
                 <div className="text-left">
                   <h4 className="font-semibold text-gray-900">Link Expires</h4>
-                  <p className="text-sm text-gray-600">The verification link will expire in 24 hours</p>
+                  <p className="text-sm text-gray-600">
+                    The verification link will expire in 24 hours
+                  </p>
                 </div>
               </div>
 
@@ -123,8 +156,12 @@ export default function EmailVerificationPage() {
                   <FiAlertCircle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-semibold text-gray-900">Check Spam Folder</h4>
-                  <p className="text-sm text-gray-600">If you dont see the email, check your spam or junk folder</p>
+                  <h4 className="font-semibold text-gray-900">
+                    Check Spam Folder
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    If you dont see the email, check your spam or junk folder
+                  </p>
                 </div>
               </div>
 
@@ -133,8 +170,12 @@ export default function EmailVerificationPage() {
                   <FiShield className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-semibold text-gray-900">Secure Verification</h4>
-                  <p className="text-sm text-gray-600">This helps us ensure the security of your workspace</p>
+                  <h4 className="font-semibold text-gray-900">
+                    Secure Verification
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    This helps us ensure the security of your workspace
+                  </p>
                 </div>
               </div>
             </div>
@@ -143,14 +184,19 @@ export default function EmailVerificationPage() {
             <div className="mt-8">
               <button
                 onClick={handleResendEmail}
-                disabled={resending || countdown > 0}
+                disabled={resending || countdown > 0 || verifying}
                 className={`group relative w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white transition-all duration-200 ${
-                  countdown > 0 || resending
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
+                  countdown > 0 || resending || verifying
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
                 }`}
               >
-                {resending ? (
+                {verifying ? (
+                  <>
+                    <FiRefreshCw className="animate-spin h-4 w-4 mr-2" />
+                    Verifying...
+                  </>
+                ) : resending ? (
                   <>
                     <FiRefreshCw className="animate-spin h-4 w-4 mr-2" />
                     Sending...
@@ -196,7 +242,10 @@ export default function EmailVerificationPage() {
         <div className="mt-8 text-center">
           <div className="flex items-center justify-center space-x-2 text-gray-500 text-sm">
             <FiShield className="h-4 w-4" />
-            <span>Your security is our priority. All verification emails are encrypted.</span>
+            <span>
+              Your security is our priority. All verification emails are
+              encrypted.
+            </span>
           </div>
           <p className="mt-2 text-xs text-gray-400">
             WorkflowPro • Enterprise Workflow Management Platform
@@ -204,5 +253,19 @@ export default function EmailVerificationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EmailVerificationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <EmailVerificationContent />
+    </Suspense>
   );
 }
