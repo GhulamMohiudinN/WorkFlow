@@ -45,30 +45,33 @@ export const authAPI = {
   },
 
   // Create workspace
-createWorkspace: async (workspaceData) => {
-  const response = await api.post("/workspace/createWorkspace", workspaceData);
-  const data = response.data;
+  createWorkspace: async (workspaceData) => {
+    const response = await api.post(
+      "/workspace/createWorkspace",
+      workspaceData,
+    );
+    const data = response.data;
 
-  // Store workspace data in localStorage
-  if (data.workspace) {
-    localStorage.setItem("workspace", JSON.stringify(data.workspace));
-  }
-
-  // Keep user updated with workspaceId
-  if (data.user) {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-    const updatedUser = {
-      ...currentUser,
-      ...data.user,
-    };
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-    if (data.user.workspaceId) {
-      updatedUser.workspaceId = data.user.workspaceId;
+    // Store workspace data in localStorage
+    if (data.workspace) {
+      localStorage.setItem("workspace", JSON.stringify(data.workspace));
     }
-  }
 
-  return data;
-},
+    // Keep user updated with workspaceId
+    if (data.user) {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedUser = {
+        ...currentUser,
+        ...data.user,
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      if (data.user.workspaceId) {
+        updatedUser.workspaceId = data.user.workspaceId;
+      }
+    }
+
+    return data;
+  },
 
   // Logout user
   logout: async () => {
@@ -92,6 +95,21 @@ createWorkspace: async (workspaceData) => {
   updateProfile: async (userData) => {
     const response = await api.put("/users/profile", userData);
     return response.data;
+  },
+
+  // Update workspace
+  updateWorkspace: async (workspaceData) => {
+    const response = await api.patch(
+      "/workspace/updateWorkspace",
+      workspaceData,
+    );
+    const data = response.data;
+
+    if (data.workspace) {
+      localStorage.setItem("workspace", JSON.stringify(data.workspace));
+    }
+
+    return data;
   },
 
   // Verify email
