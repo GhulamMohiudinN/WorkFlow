@@ -24,15 +24,7 @@ function EmailVerificationContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  useEffect(() => {
-    const data = JSON.parse(sessionStorage.getItem("userData"));
-    setUserData(data);
 
-    // Auto-verify if token is present in URL
-    if (token) {
-      handleVerifyEmail(token);
-    }
-  }, [token]);
 
   const handleVerifyEmail = async (verificationToken) => {
     try {
@@ -55,6 +47,16 @@ function EmailVerificationContent() {
       setVerifying(false);
     }
   };
+
+    useEffect(() => {
+    const data = JSON.parse(sessionStorage.getItem("userData"));
+    setUserData(data);
+
+    // Auto-verify if token is present in URL
+    if (token) {
+      handleVerifyEmail(token);
+    }
+  }, [token]);
 
   useMemo(() => {
     if (countdown > 0) {
@@ -122,14 +124,8 @@ function EmailVerificationContent() {
             </h2>
 
             <div className="space-y-4">
-              <p className="text-gray-600">We've sent a verification link to</p>
-
-              <div className="inline-flex items-center bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-                <FiMail className="h-5 w-5 text-amber-500 mr-2" />
-                <span className="font-medium text-gray-800">
-                  {userData?.email}
-                </span>
-              </div>
+              <p className="text-gray-600">We`ve sent a verification link to your gmail account.</p>
+              
 
               <p className="text-gray-600 text-sm">
                 Click the link in the email to verify your account and access

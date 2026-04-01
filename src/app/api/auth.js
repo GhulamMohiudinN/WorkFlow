@@ -5,7 +5,7 @@ export const authAPI = {
   login: async (credentials) => {
     const response = await api.post("/users/signin", credentials);
     const data = response.data;
-
+    console.log("Full response data:", data);
     // Store user data in localStorage
     // If not provided in response, set defaults for demo
     localStorage.setItem(
@@ -30,7 +30,7 @@ export const authAPI = {
         },
       ),
     );
-    if (data.accessToken) localStorage.setItem("accessToken", data.accessToken);
+    if (data.token) localStorage.setItem("token", data.token);
     if (data.refreshToken)
       localStorage.setItem("refreshToken", data.refreshToken);
     if (data.userId) localStorage.setItem("userId", data.userId);
@@ -43,6 +43,32 @@ export const authAPI = {
     const response = await api.post("/users/signup", userData);
     return response.data;
   },
+
+  // Create workspace
+createWorkspace: async (workspaceData) => {
+  const response = await api.post("/workspace/createWorkspace", workspaceData);
+  const data = response.data;
+
+  // Store workspace data in localStorage
+  if (data.workspace) {
+    localStorage.setItem("workspace", JSON.stringify(data.workspace));
+  }
+
+  // Keep user updated with workspaceId
+  if (data.user) {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const updatedUser = {
+      ...currentUser,
+      ...data.user,
+    };
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    if (data.user.workspaceId) {
+      updatedUser.workspaceId = data.user.workspaceId;
+    }
+  }
+
+  return data;
+},
 
   // Logout user
   logout: async () => {
@@ -71,7 +97,28 @@ export const authAPI = {
   // Verify email
   verifyEmail: async (token) => {
     const response = await api.post(`/users/verify-email/${token}`);
-    return response.data;
+    const data = response.data;
+
+    if (data?.user) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("role", data.user.userType || "admin");
+      localStorage.setItem("userId", data.user.id);
+    }
+
+    if (data?.token) {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("accessToken", data.token);
+    }
+
+    if (data?.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
+
+    if (data?.workspace) {
+      localStorage.setItem("workspace", JSON.stringify(data.workspace));
+    }
+
+    return data;
   },
 
   // Resend verification email

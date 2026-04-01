@@ -110,32 +110,32 @@ export default function DashboardLayout({ children }) {
       name: "Dashboard",
       href: "/dashboard",
       icon: FiHome,
-      current: pathname === "/dashboard",
+      current: pathname.includes ("/dashboard"),
     },
     {
       name: "Company",
       href: "company",
       icon: FaBuilding,
-      current: pathname === "/company",
+      current: pathname.includes ("/company"),
     },
     {
       name: "Processes",
       href: "processes",
       icon: FiLayers,
-      current: pathname === "/processes",
+      current: pathname.includes ("/processes"),
     },
     {
       name: "Users",
       href: "users",
       icon: FiUsers,
-      current: pathname === "/users",
+      current: pathname.includes ("/users"),
     },
     // { name: 'Analytics', href: '/dashboard/analytics', icon: FiBarChart2, current: pathname === '/dashboard/analytics' },
     {
       name: "Settings",
       href: "/settings",
       icon: FiSettings,
-      current: pathname === "/settings",
+      current: pathname.includes ("/settings"),
     },
   ];
 

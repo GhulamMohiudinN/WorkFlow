@@ -71,7 +71,6 @@ export const signupSchema = Yup.object().shape({
 //  create workspace form schema
 
 export const step1Schema = Yup.object().shape({
-  userName: Yup.string().trim().required("User Name is required"),
   companyName: Yup.string()
     .trim()
     .min(3, "Workspace name must be at least 3 characters")
@@ -106,8 +105,8 @@ export const step2Schema = Yup.object().shape({
     ),
   timezone: Yup.string().trim(),
   currency: Yup.string().trim().required("Primary Currency is required"),
-  taxID: Yup.string().trim(),
-  companyRegistrationNumber: Yup.string().trim(),
+  taxId: Yup.string().trim(),
+  registrationNumber: Yup.string().trim(),
 });
 
 export const step3Schema = Yup.object().shape({

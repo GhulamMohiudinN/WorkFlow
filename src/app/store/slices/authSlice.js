@@ -35,10 +35,16 @@ export const signupUser = createAsyncThunk(
       });
       const { user, accessToken, refreshToken } = response;
 
-      // Save to localStorage
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("user", JSON.stringify(user));
+      // Save to localStorage (only if present)
+      if (accessToken) {
+        localStorage.setItem("accessToken", accessToken);
+      }
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
 
       return { user, accessToken, refreshToken };
     } catch (error) {

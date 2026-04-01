@@ -203,7 +203,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Team Members</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {workspace?.members.length}
+                0
               </p>
             </div>
             <div className="bg-amber-100 p-3 rounded-lg">

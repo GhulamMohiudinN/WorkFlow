@@ -47,6 +47,9 @@ export default function SignupPage() {
   const onSubmit = async (formData) => {
     try {
       const result = await dispatch(signupUser(formData)).unwrap();
+      if (result?.user) {
+        sessionStorage.setItem("userData", JSON.stringify(result.user));
+      }
       toast.success(
         "Account created successfully! Please check your email for verification.",
         {

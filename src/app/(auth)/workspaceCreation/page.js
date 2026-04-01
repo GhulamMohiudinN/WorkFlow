@@ -40,7 +40,6 @@ import {
 function CompanySetupContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [password, setPassword] = useState("");
   const [workflowError, setWorkflowError] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [verifying, setVerifying] = useState(false);
@@ -77,13 +76,14 @@ function CompanySetupContent() {
       },
     },
   });
-  const formData = getValues();
 
-  // functionality start here-----------
+  const primaryWorkflowTypes = watch("primaryWorkflowTypes");
+  const automationPriority = watch("automationPriority");
+  const notificationPreferences = watch("notificationPreferences");
+
   useEffect(() => {
     const initializePage = async () => {
       if (token) {
-        // Verify email if token is present
         try {
           setVerifying(true);
           const data = await authAPI.verifyEmail(token);
@@ -104,10 +104,8 @@ function CompanySetupContent() {
           return;
         }
       } else {
-        // No token, check sessionStorage for userData
         const userData = JSON.parse(sessionStorage.getItem("userData"));
         if (userData) {
-          setPassword(userData.password);
           setValue("companyEmail", userData.email);
           setValue("adminEmail", userData.email);
         } else {
@@ -151,15 +149,15 @@ function CompanySetupContent() {
       shouldValidate: true,
       shouldDirty: true,
     });
-    setLoading(false);
   };
 
   const handleFormData = async () => {
+    const formData = getValues();
     const isStepValid = await trigger();
     setWorkflowError("");
 
     if (isStepValid) {
-      if (currentStep === 3 && formData.primaryWorkflowTypes.length === 0) {
+      if (currentStep === 3 && (formData.primaryWorkflowTypes || []).length === 0) {
         setWorkflowError("Please select at least one workflow type");
         return;
       }
@@ -167,58 +165,54 @@ function CompanySetupContent() {
         setCurrentStep(currentStep + 1);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        handleSubmit(async (formData) => {
-          try {
-            setLoading(true);
+        // Final step - Submit to API
+        try {
+          setLoading(true);
 
-            handleSubmit(async (formData) => {
-              try {
-                setLoading(true);
+          // Prepare workspace data for API - exactly as expected (no userName field)
+          const workspaceData = {
+            companyName: formData.companyName,
+            companyEmail: formData.companyEmail,
+            companyType: formData.companyType,
+            headquarters: formData.headquarters,
+            foundedYear: formData.foundedYear,
+            industry: formData.industry,
+            employeeCount: formData.employeeCount,
+            currency: formData.currency,
+            automationPriority: formData.automationPriority,
+            initialTeamSize: formData.initialTeamSize,
+            expectedWorkflows: formData.expectedWorkflows,
+            taxId: formData.taxId || "",
+            registrationNumber: formData.registrationNumber || "",
+            timezone: formData.timezone,
+            website: formData.website || "",
+            phoneNumber: formData.phoneNumber || "",
+            primaryWorkflowTypes: formData.primaryWorkflowTypes,
+            notificationPreferences: formData.notificationPreferences,
+          };
 
-                // Simulate user creation
-                const mockUser = {
-                  _id: "mock-user-id",
-                  name: formData.userName,
-                  email: formData.companyEmail,
-                  isEmailVerified: true,
-                };
+          console.log("Submitting workspace data:", workspaceData);
 
-                // Simulate workspace creation
-                const mockWorkspace = {
-                  _id: "mock-workspace-id",
-                  name: formData.companyName,
-                  adminId: { _id: mockUser._id },
-                  members: [],
-                  ...formData,
-                };
+          // Call the actual API
+          const response = await authAPI.createWorkspace(workspaceData);
 
-                // Simulate storing tokens
-                localStorage.setItem("accessToken", "mock-access-token");
-                localStorage.setItem("refreshToken", "mock-refresh-token");
+          console.log("Workspace creation response:", response);
 
-                // Simulate setting user and workspace (but since we removed store, just log)
-                console.log("User created:", mockUser);
-                console.log("Workspace created:", mockWorkspace);
+          setLoading(false);
+          toast.success("Workspace created successfully!");
+          router.push("/login");
 
-                setLoading(false);
-                toast.success("Workspace created successfully!");
-                router.push("/dashboard");
-              } catch (err) {
-                setLoading(false);
-                toast.error("Unexpected error occurred.");
-                console.error(err);
-              }
-            })();
-          } catch (err) {
-            setLoading(false);
-            toast.error("Unexpected error occurred.");
-            console.error(err);
-          }
-        })();
+        } catch (err) {
+          setLoading(false);
+          console.error("Error creating workspace:", err);
+          console.error("Error details:", err.response?.data || err.message);
+
+          const errorMessage = err.response?.data?.message || "Failed to create workspace. Please try again.";
+          toast.error(errorMessage);
+        }
       }
     }
   };
-
   const handlePrevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
@@ -256,7 +250,6 @@ function CompanySetupContent() {
               onClick={() => {
                 setVerificationError(null);
                 setVerifying(true);
-                // Retry verification
                 authAPI
                   .verifyEmail(token)
                   .then(() => {
@@ -350,27 +343,6 @@ function CompanySetupContent() {
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Name *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiUser className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      name="userName"
-                      {...register("userName")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                      placeholder="Enter your name"
-                      required
-                    />
-                  </div>
-                  <p className="text-red-500 text-sm mt-2">
-                    {errors.userName?.message}
-                  </p>
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -458,11 +430,9 @@ function CompanySetupContent() {
                     </div>
                     <input
                       type="email"
-                      name="companyEmail"
-                      disabled
-                      value={formData.companyEmail || " "}
-                      onChange={handleInputChange}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                       name="companyEmail"
+                      {...register("companyEmail")}
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 bg-gray-50"
                       placeholder="contact@company.com"
                       required
                     />
@@ -480,8 +450,6 @@ function CompanySetupContent() {
                     type="tel"
                     name="phoneNumber"
                     {...register("phoneNumber")}
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                     placeholder="+1 (555) 123-4567"
                   />
@@ -502,8 +470,6 @@ function CompanySetupContent() {
                       type="url"
                       name="website"
                       {...register("website")}
-                      value={formData.website}
-                      onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       placeholder="https://company.com"
                     />
@@ -525,8 +491,6 @@ function CompanySetupContent() {
                       type="number"
                       name="foundedYear"
                       {...register("foundedYear")}
-                      value={formData.foundedYear}
-                      onChange={handleInputChange}
                       min="1800"
                       max={new Date().getFullYear()}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -556,8 +520,6 @@ function CompanySetupContent() {
                     <select
                       name="employeeCount"
                       {...register("employeeCount")}
-                      value={formData.employeeCount}
-                      onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       required
                     >
@@ -586,8 +548,6 @@ function CompanySetupContent() {
                       type="text"
                       name="headquarters"
                       {...register("headquarters")}
-                      value={formData.headquarters}
-                      onChange={handleInputChange}
                       className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                       placeholder="City, Country"
                       required
@@ -604,8 +564,7 @@ function CompanySetupContent() {
                   </label>
                   <select
                     name="timezone"
-                    value={formData.timezone}
-                    onChange={handleInputChange}
+                    {...register("timezone")}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   >
                     {Intl.supportedValuesOf("timeZone").map((tz) => (
@@ -626,8 +585,6 @@ function CompanySetupContent() {
                   <select
                     name="currency"
                     {...register("currency")}
-                    value={formData.currency}
-                    onChange={handleInputChange}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   >
                     <option value="USD">USD ($)</option>
@@ -649,8 +606,7 @@ function CompanySetupContent() {
                   <input
                     type="text"
                     name="taxId"
-                    value={formData.taxId}
-                    onChange={handleInputChange}
+                    {...register("taxId")}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                     placeholder="Enter tax identification number"
                   />
@@ -666,15 +622,14 @@ function CompanySetupContent() {
                   <input
                     type="text"
                     name="registrationNumber"
-                    value={formData.registrationNumber}
-                    onChange={handleInputChange}
+                    {...register("registrationNumber")}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                     placeholder="Enter registration number"
                   />
+                  <p className="text-red-500 text-sm mt-2">
+                    {errors.registrationNumber?.message}
+                  </p>
                 </div>
-                <p className="text-red-500 text-sm mt-2">
-                  {errors.registrationNumber?.message}
-                </p>
               </div>
 
               <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
@@ -682,9 +637,7 @@ function CompanySetupContent() {
                   <FiShield className="h-5 w-5 text-amber-600 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-700">
-                      Your company information is stored securely in MongoDB
-                      with enterprise-grade encryption. This data helps us
-                      customize your workflow management experience.
+                      Your company information is stored securely with enterprise-grade encryption.
                     </p>
                   </div>
                 </div>
@@ -704,7 +657,7 @@ function CompanySetupContent() {
                     <div
                       key={type}
                       className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
-                        formData.primaryWorkflowTypes?.includes(type)
+                        primaryWorkflowTypes?.includes(type)
                           ? "border-amber-500 bg-amber-50"
                           : "border-gray-300 hover:border-amber-300"
                       }`}
@@ -714,12 +667,12 @@ function CompanySetupContent() {
                     >
                       <div
                         className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
-                          formData.primaryWorkflowTypes?.includes(type)
+                          primaryWorkflowTypes?.includes(type)
                             ? "border-amber-500 bg-amber-500"
                             : "border-gray-400"
                         }`}
                       >
-                        {formData.primaryWorkflowTypes?.includes(type) && (
+                        {primaryWorkflowTypes?.includes(type) && (
                           <FiCheck className="h-3 w-3 text-white" />
                         )}
                       </div>
@@ -739,9 +692,6 @@ function CompanySetupContent() {
                   </label>
                   <select
                     {...register("expectedWorkflows")}
-                    name="expectedWorkflows"
-                    value={formData.expectedWorkflows}
-                    onChange={handleInputChange}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   >
                     <option value="">Select range</option>
@@ -760,16 +710,14 @@ function CompanySetupContent() {
                     Automation Priority
                   </label>
                   <div className="flex space-x-4">
-                    {["low", "medium", "high"].map((level) => (
+                    {['low', 'medium', 'high'].map((level) => (
                       <label key={level} className="flex items-center">
                         <input
                           type="radio"
                           name="automationPriority"
                           value={level}
-                          defaultChecked={level === "medium"}
-                          checked={formData.automationPriority === level}
+                          checked={automationPriority === level}
                           onChange={handleInputChange}
-                          // {...register("automationPriority")}
                           className="h-4 w-4 text-amber-600 focus:ring-amber-500"
                         />
                         <span className="ml-2 text-sm text-gray-700 capitalize">
@@ -780,41 +728,6 @@ function CompanySetupContent() {
                   </div>
                 </div>
               </div>
-
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  Integration Needs (Optional)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {integrationOptions.map(integration => (
-                    <button
-                      key={integration}
-                      type="button"
-                      onClick={() => handleArrayChange('integrationNeeds', integration)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${formData.integrationNeeds?.includes(integration)
-                          ? 'bg-amber-100 text-amber-700 border border-amber-300'
-                          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                        }`}
-                    >
-                      {integration}
-                    </button>
-                  ))}
-                </div>
-              </div> */}
-
-              {/* <div className="flex items-center">
-                <input
-                  id="complianceRequired"
-                  name="complianceRequired"
-                  type="checkbox"
-                  checked={formData.complianceRequired}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
-                />
-                <label htmlFor="complianceRequired" className="ml-2 block text-sm text-gray-700">
-                  We require compliance tracking (GDPR, HIPAA, SOC2, etc.)
-                </label>
-              </div> */}
 
               <div className="p-4 bg-linear-to-r from-amber-50 to-amber-100 rounded-lg border border-amber-200">
                 <div className="flex items-start space-x-3">
@@ -843,8 +756,7 @@ function CompanySetupContent() {
                   </label>
                   <select
                     name="initialTeamSize"
-                    value={formData.initialTeamSize}
-                    onChange={handleInputChange}
+                    {...register("initialTeamSize")}
                     className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   >
                     <option value="1">Just me (Admin)</option>
@@ -857,27 +769,6 @@ function CompanySetupContent() {
                     {errors.initialTeamSize?.message}
                   </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Admin Email for Notifications *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiHash className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="email"
-                      name="adminEmail"
-                      disabled
-                      value={formData.adminEmail}
-                      onChange={handleInputChange}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                      placeholder="admin@company.com"
-                      required
-                    />
-                  </div>
-                </div>
               </div>
 
               <div>
@@ -885,8 +776,7 @@ function CompanySetupContent() {
                   Notification Preferences
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {}
-                  {Object.entries(formData?.notificationPreferences || {}).map(
+                  {Object.entries(notificationPreferences || {}).map(
                     ([channel, enabled]) => (
                       <div
                         key={channel}
@@ -1027,9 +917,7 @@ function CompanySetupContent() {
       <footer className="mt-12 py-6 border-t border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm text-gray-500">
-            Your data is securely stored in MongoDB with enterprise encryption.
-            All information is used solely to enhance your workflow management
-            experience.
+            Your data is securely stored with enterprise encryption.
           </p>
           <p className="mt-2 text-xs text-gray-400">
             WorkflowPro • Enterprise Workflow Management Platform
