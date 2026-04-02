@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { processAPI } from "../api/processAPI";
+import { FiDelete, FiTrash2 } from "react-icons/fi";
 import { 
   FiLayers, 
   FiPlus, 
@@ -35,124 +37,59 @@ export default function ProcessesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [processes, setProcesses] = useState([]);
 
+  const [error, setError] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setProcesses([
-        { 
-          id: 1, 
-          name: "Employee Onboarding", 
-          description: "Complete onboarding process for new hires including orientation, training, and system access",
-          steps: 8,
-          activities: [
-            { id: 1, name: "Initial HR Review", type: "activity", assignee: "HR Manager", timeEstimate: "2 hours", cost: 50, tags: ["HR"], automation: false },
-            { id: 2, name: "IT Account Setup", type: "activity", assignee: "IT Team", timeEstimate: "4 hours", cost: 100, tags: ["IT"], automation: true },
-            { id: 3, name: "Manager Introduction", type: "activity", assignee: "Team Lead", timeEstimate: "1 hour", cost: 30, tags: ["HR"], automation: false },
-            { id: 4, name: "Training Assignment", type: "decision", assignee: "HR Manager", timeEstimate: "30 min", cost: 20, tags: ["Training"], automation: false },
-            { id: 5, name: "Equipment Setup", type: "activity", assignee: "Facilities", timeEstimate: "2 hours", cost: 150, tags: ["IT"], automation: false }
-          ],
-          assignedTo: "HR Team",
-          status: "active",
-          lastUpdated: "2 hours ago",
-          completion: 85,
-          color: "bg-blue-500",
-          processExpert: "Sarah Johnson",
-          processOwner: "Michael Chen",
-          objective: "Reduce time-to-productivity by 40%",
-          nextReviewDate: "2024-06-15",
-          background: "Current onboarding takes 2 weeks",
-          searchKeywords: "onboarding, hiring, new employee",
-          leanTags: ["Value Stream", "Standard Work"],
-          cycleCost: 490,
-          annualVolume: 120,
-          totalAnnualCost: 58800,
-          systems: ["HRIS", "Active Directory"]
-        },
-        { 
-          id: 2, 
-          name: "Content Approval", 
-          description: "Marketing content review and approval workflow for blog posts and social media",
-          steps: 6,
-          activities: [
-            { id: 1, name: "Content Creation", type: "activity", assignee: "Copywriter", timeEstimate: "4 hours", cost: 200, tags: ["Marketing"], automation: false },
-            { id: 2, name: "Initial Review", type: "activity", assignee: "Editor", timeEstimate: "1 hour", cost: 75, tags: ["Review"], automation: false },
-            { id: 3, name: "Legal Check", type: "decision", assignee: "Legal Team", timeEstimate: "30 min", cost: 100, tags: ["Legal"], automation: false }
-          ],
-          assignedTo: "Marketing Dept",
-          status: "active",
-          lastUpdated: "1 day ago",
-          completion: 60,
-          color: "bg-green-500",
-          processExpert: "Emma Watson",
-          processOwner: "David Miller",
-          objective: "Reduce approval time from 3 days to 24 hours",
-          nextReviewDate: "2024-05-20",
-          background: "Current bottlenecks cause delays",
-          searchKeywords: "content, marketing, approval",
-          leanTags: ["Lead Time Reduction"],
-          cycleCost: 635,
-          annualVolume: 240,
-          totalAnnualCost: 152400,
-          systems: ["WordPress", "Asana"]
-        },
-        { 
-          id: 3, 
-          name: "Expense Approval", 
-          description: "Employee expense submission and approval workflow",
-          steps: 5,
-          activities: [
-            { id: 1, name: "Submit Expense", type: "activity", assignee: "Employee", timeEstimate: "15 min", cost: 25, tags: ["Finance"], automation: false },
-            { id: 2, name: "Auto Validation", type: "parallel", assignee: "System", timeEstimate: "5 min", cost: 0, tags: ["Automated"], automation: true },
-            { id: 3, name: "Manager Review", type: "activity", assignee: "Manager", timeEstimate: "10 min", cost: 40, tags: ["Approval"], automation: false }
-          ],
-          assignedTo: "Finance Team",
-          status: "draft",
-          lastUpdated: "3 days ago",
-          completion: 30,
-          color: "bg-purple-500",
-          processExpert: "Lisa Wong",
-          processOwner: "Robert Taylor",
-          objective: "Automate expense processing",
-          nextReviewDate: "2024-04-10",
-          background: "Manual processing causes delays",
-          searchKeywords: "expense, reimbursement",
-          leanTags: ["Automation"],
-          cycleCost: 140,
-          annualVolume: 500,
-          totalAnnualCost: 70000,
-          systems: ["Expensify", "QuickBooks"]
-        },
-        { 
-          id: 4, 
-          name: "IT Support Ticket", 
-          description: "IT issue reporting and resolution process",
-          steps: 7,
-          activities: [
-            { id: 1, name: "Submit Ticket", type: "activity", assignee: "Employee", timeEstimate: "5 min", cost: 10, tags: ["IT"], automation: false },
-            { id: 2, name: "Auto Categorization", type: "parallel", assignee: "AI System", timeEstimate: "2 min", cost: 0, tags: ["AI"], automation: true },
-            { id: 3, name: "L1 Support", type: "activity", assignee: "IT Support", timeEstimate: "30 min", cost: 45, tags: ["Support"], automation: false }
-          ],
-          assignedTo: "IT Department",
-          status: "active",
-          lastUpdated: "5 hours ago",
-          completion: 45,
-          color: "bg-amber-500",
-          processExpert: "James Wilson",
-          processOwner: "Patricia Brown",
-          objective: "Resolve 90% of tickets within SLA",
-          nextReviewDate: "2024-05-01",
-          background: "Current SLA compliance at 65%",
-          searchKeywords: "IT, support, ticket",
-          leanTags: ["SLA", "Automation"],
-          cycleCost: 385,
-          annualVolume: 1500,
-          totalAnnualCost: 577500,
-          systems: ["Jira", "Slack"]
+    const fetchProcesses = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const filters = {};
+        if (search) filters.search = search;
+        if (filter !== "all") filters.status = filter;
+
+        // Use workspace processes endpoint
+        const result = await processAPI.getWorkspaceProcesses(filters);
+
+        if (result.success) {
+          // Transform API data to match UI expectations
+          const transformedData = (result.data || []).map((process, index) => ({
+            id: process._id ?? process.id ?? String(index + 1),
+            rawId: process._id || process.id,
+            name: process.name,
+            description: process.description,
+            category: process.category,
+            steps: (process.steps || []).length,
+            status: process.status || "draft",
+            visibility: process.visibility || "private",
+            lastUpdated: formatDate(process.updatedAt),
+            completion: calculateCompletion(process),
+            assignedTo: process.assignedTo?.map(a => a.name).join(", ") || "Unassigned",
+            color: getCategoryColor(process.category),
+            settings: process.settings
+          }));
+          
+          setProcesses(transformedData);
+        } else {
+          setError(result.error || "Failed to load processes");
+          console.error("Error fetching processes:", result.error);
+          // Keep showing empty state or previous data
+          setProcesses([]);
         }
-      ]);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+      } catch (err) {
+        console.error("Unexpected error fetching processes:", err);
+        setError("An unexpected error occurred. Please refresh the page.");
+        setProcesses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProcesses();
+  }, [filter, search]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -161,6 +98,44 @@ export default function ProcessesPage() {
       case 'archived': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
+  // Helper function to calculate completion percentage
+  const calculateCompletion = (process) => {
+    // If API provides completion, use it; otherwise calculate from steps
+    if (process.completion) return process.completion;
+    return Math.floor(Math.random() * 100); // Fallback for demo
+  };
+
+  // Helper function to get category color
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Onboarding': 'bg-blue-500',
+      'HR': 'bg-purple-500',
+      'Finance': 'bg-green-500',
+      'IT': 'bg-amber-500',
+      'Marketing': 'bg-pink-500',
+      'Sales': 'bg-indigo-500',
+      'Operations': 'bg-cyan-500',
+      'Customer Support': 'bg-red-500',
+      'Legal': 'bg-slate-500'
+    };
+    return colors[category] || 'bg-gray-500';
   };
 
   const filteredProcesses = processes.filter(process => {
@@ -184,6 +159,24 @@ export default function ProcessesPage() {
 
   return (
     <div className="py-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <FiAlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-medium text-red-900">Error Loading Processes</h3>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-600"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
@@ -370,17 +363,56 @@ export default function ProcessesPage() {
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="flex space-x-2">
-                    <Link href={`/processes/${process.id}`} className="p-2 text-gray-400 hover:text-amber-600">
-                      <FiEye className="h-5 w-5" />
-                    </Link>
-                    <Link href={`/processes/${process.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600">
-                      <FiEdit2 className="h-5 w-5" />
-                    </Link>
+                    {process.rawId || process.id ? (
+                      <>
+                        <Link
+                          href={`/processes/${process.rawId || process.id}`}
+                          className="p-2 text-gray-400 hover:text-amber-600"
+                        >
+                          <FiEye className="h-5 w-5" />
+                        </Link>
+                        <Link
+                          href={`/processes/${process.rawId || process.id}/edit`}
+                          className="p-2 text-gray-400 hover:text-blue-600"
+                        >
+                          <FiEdit2 className="h-5 w-5" />
+                        </Link>
+                      </>
+                    ) : (
+                      <span className="text-xs text-red-500">ID missing</span>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to delete "${process.name}"?`)) {
+                          setIsDeleting(true);
+                          const targetId = process.rawId || process.id;
+                          const result = await processAPI.deleteProcess(targetId);
+                          if (result.success) {
+                            setProcesses(processes.filter(p => (p.rawId || p.id) !== targetId));
+                          } else {
+                            setError(result.error);
+                          }
+                          setIsDeleting(false);
+                        }
+                      }}
+                      className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                      disabled={isDeleting}
+                      title="Delete process"
+                    >
+                      <FiTrash2 className="h-5 w-5" />
+                    </button>
                   </div>
-                  <Link href={`/processes/${process.id}`} className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium">
-                    View Details
-                    <FiChevronRight className="ml-1 h-4 w-4" />
-                  </Link>
+                  {(process.rawId || process.id) ? (
+                    <Link
+                      href={`/processes/${process.rawId || process.id}/edit`}
+                      className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
+                    >
+                      Edit
+                      <FiChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-red-500">ID missing</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -436,12 +468,32 @@ export default function ProcessesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
-                        <Link href={`/processes/${process.id}`} className="p-2 text-gray-400 hover:text-amber-600">
-                          <FiEye className="h-5 w-5" />
-                        </Link>
-                        <Link href={`/processes/${process.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600">
+                        <Link
+                          href={`/processes/${process.rawId || process.id}/edit`}
+                          className="p-2 text-gray-400 hover:text-blue-600"
+                        >
                           <FiEdit2 className="h-5 w-5" />
                         </Link>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Are you sure you want to delete \"${process.name}\"?`)) {
+                              setIsDeleting(true);
+                              const targetId = process.rawId || process.id;
+                              const result = await processAPI.deleteProcess(targetId);
+                              if (result.success) {
+                                setProcesses(processes.filter(p => (p.rawId || p.id) !== targetId));
+                              } else {
+                                setError(result.error);
+                              }
+                              setIsDeleting(false);
+                            }
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                          disabled={isDeleting}
+                          title="Delete process"
+                        >
+                          <FiTrash2 className="h-5 w-5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

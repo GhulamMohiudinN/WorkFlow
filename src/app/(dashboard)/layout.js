@@ -29,16 +29,38 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
+
   const router = useRouter();
   const pathname = usePathname();
 
-  const isBrowser = typeof window !== "undefined";
-  const user = isBrowser ? JSON.parse(localStorage.getItem("user") || "null") : null;
-  const role = isBrowser ? localStorage.getItem("role") : null;
-  const workspace = isBrowser ? JSON.parse(localStorage.getItem("workspace") || "null") : null;
-
+  // Single initialization effect - runs once on client mount
   useEffect(() => {
-    if (!isBrowser) return;
+    setIsMounted(true);
+
+    try {
+      const storedUser = localStorage.getItem("user");
+      const storedRole = localStorage.getItem("role");
+      const storedWorkspace = localStorage.getItem("workspace");
+
+      // Set state from localStorage
+      setUser(storedUser ? JSON.parse(storedUser) : null);
+      setRole(storedRole);
+      setWorkspace(storedWorkspace ? JSON.parse(storedWorkspace) : null);
+    } catch (err) {
+      console.error("Error loading user data from storage:", err);
+      setUser(null);
+      setRole(null);
+      setWorkspace(null);
+    }
+  }, []);
+
+  // Authorization check effect
+  useEffect(() => {
+    if (!isMounted) return;
 
     if (!user || !role || !workspace) {
       router.push("/login");
@@ -51,63 +73,20 @@ export default function DashboardLayout({ children }) {
     }
 
     setLoading(false);
-  }, [isBrowser, user, role, workspace, router]);
+  }, [isMounted, user, role, workspace, router]);
 
-  // connected with socket.io
+  // Socket.io registration effect
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const userId = localStorage.getItem("userId");
-      if (userId) {
-        socket.emit("register", userId);
-      }
+    if (!isMounted) return;
+
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      socket.emit("register", userId);
     }
-  }, []);
-
-  // update workspaceIfMember is added in workspace
-  useEffect(() => {
-    // Removed socket listener since we removed store
-  }, []);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Since no profile API, load from localStorage
-        const storedUser = localStorage.getItem("user");
-        const storedRole = localStorage.getItem("role");
-        const storedWorkspace = localStorage.getItem("workspace");
-
-        if (storedUser && storedRole && storedWorkspace) {
-          if (storedRole !== "admin") {
-            // Members are not allowed in admin/dashboard area
-            router.push("/users/dashboardUsers");
-            return;
-          }
-          setUser(JSON.parse(storedUser));
-          setRole(storedRole);
-          setWorkspace(JSON.parse(storedWorkspace));
-        } else {
-          // If not found, redirect to login
-          router.push("/login");
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error("Error loading user data:", err);
-        router.push("/login");
-        setLoading(false);
-      }
-    };
-
-    if (isClient) {
-      fetchUserData();
-    }
-  }, [isClient, router]);
-
-  if (!isBrowser || loading) {
-    return null; // Prevent SSR and show loading
-  }
-
-  if (!user || !workspace) {
-    return null; // Or show error
+  }, [isMounted]);
+  // Render only when mounted on client
+  if (!isMounted || loading) {
+    return null; // Prevent hydration mismatch and show loading
   }
 
   const signout = () => {
@@ -128,32 +107,32 @@ export default function DashboardLayout({ children }) {
       name: "Dashboard",
       href: "/dashboard",
       icon: FiHome,
-      current: pathname.includes ("/dashboard"),
+      current: pathname.includes("/dashboard"),
     },
     {
       name: "Company",
       href: "company",
       icon: FaBuilding,
-      current: pathname.includes ("/company"),
+      current: pathname.includes("/company"),
     },
     {
       name: "Processes",
       href: "processes",
       icon: FiLayers,
-      current: pathname.includes ("/processes"),
+      current: pathname.includes("/processes"),
     },
     {
       name: "Users",
       href: "users",
       icon: FiUsers,
-      current: pathname.includes ("/users"),
+      current: pathname.includes("/users"),
     },
     // { name: 'Analytics', href: '/dashboard/analytics', icon: FiBarChart2, current: pathname === '/dashboard/analytics' },
     {
       name: "Settings",
       href: "/settings",
       icon: FiSettings,
-      current: pathname.includes ("/settings"),
+      current: pathname.includes("/settings"),
     },
   ];
 
