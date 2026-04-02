@@ -118,13 +118,6 @@ export const step4Schema = Yup.object().shape({
 });
 
 export const addMemberSchema = Yup.object().shape({
-  userName: Yup.string().trim().required("User Name is required"),
-  email: Yup.string()
-    .trim()
-    .email("Invalid email format")
-    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address")
-    .required("Email is required"),
-
   password: Yup.string()
     .trim()
     .min(8, "Password must be at least 8 characters")
@@ -139,4 +132,8 @@ export const addMemberSchema = Yup.object().shape({
     .trim()
     .oneOf([Yup.ref("password"), null], "Passwords must match")
     .required("Confirm Password is required"),
+
+  terms: Yup.boolean()
+    .oneOf([true], "You must accept the terms and conditions")
+    .required("You must accept the terms and conditions"),
 });

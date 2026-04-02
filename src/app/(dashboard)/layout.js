@@ -28,17 +28,30 @@ export const dynamic = "force-dynamic";
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [workspace, setWorkspace] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
+  const isBrowser = typeof window !== "undefined";
+  const user = isBrowser ? JSON.parse(localStorage.getItem("user") || "null") : null;
+  const role = isBrowser ? localStorage.getItem("role") : null;
+  const workspace = isBrowser ? JSON.parse(localStorage.getItem("workspace") || "null") : null;
+
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    if (!isBrowser) return;
+
+    if (!user || !role || !workspace) {
+      router.push("/login");
+      return;
+    }
+
+    if (role !== "admin") {
+      router.push("/users/dashboardUsers");
+      return;
+    }
+
+    setLoading(false);
+  }, [isBrowser, user, role, workspace, router]);
 
   // connected with socket.io
   useEffect(() => {
@@ -64,6 +77,11 @@ export default function DashboardLayout({ children }) {
         const storedWorkspace = localStorage.getItem("workspace");
 
         if (storedUser && storedRole && storedWorkspace) {
+          if (storedRole !== "admin") {
+            // Members are not allowed in admin/dashboard area
+            router.push("/users/dashboardUsers");
+            return;
+          }
           setUser(JSON.parse(storedUser));
           setRole(storedRole);
           setWorkspace(JSON.parse(storedWorkspace));
@@ -84,7 +102,7 @@ export default function DashboardLayout({ children }) {
     }
   }, [isClient, router]);
 
-  if (!isClient || loading) {
+  if (!isBrowser || loading) {
     return null; // Prevent SSR and show loading
   }
 

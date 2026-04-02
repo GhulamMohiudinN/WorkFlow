@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -23,15 +23,39 @@ import { useRouter } from 'next/navigation';
 export default function UserLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const isBrowser = typeof window !== "undefined";
+  const storedUserString = isBrowser ? localStorage.getItem("user") : null;
+  const storedRole = isBrowser ? localStorage.getItem("role") : null;
+
+  const user = storedUserString ? JSON.parse(storedUserString) : null;
+
+  useEffect(() => {
+    if (!isBrowser) return;
+    if (!storedUserString || !storedRole) {
+      router.push("/login");
+      return;
+    }
+    if (storedRole !== "member") {
+      // Admins are not allowed in member area
+      router.push("/dashboard");
+    }
+  }, [isBrowser, storedUserString, storedRole, router]);
+
+  if (!isBrowser) {
+    return null;
+  }
+
+  if (!storedUserString || !storedRole || storedRole !== "member") {
+    return null;
+  }
 
   const navigation = [
     { name: "Dashboard", href: "/dashboardUsers", icon: FiHome },
     { name: "Processes", href: "/processesUsers", icon: FiLayers },
     { name: "My Profile", href: "/profile", icon: FiUser },
   ];
-
-  const router = useRouter();
-
 
   const isActive = (href) => pathname === href;
 
@@ -94,7 +118,15 @@ export default function UserLayout({ children }) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <button onClick={()=>router.push('/')} className="flex items-center w-full px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+          <button onClick={() => {
+            localStorage.removeItem("user");
+            localStorage.removeItem("role");
+            localStorage.removeItem("workspace");
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("userId");
+            router.push("/login");
+          }} className="flex items-center w-full px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
             <FiLogOut className="h-5 w-5 mr-3 text-gray-500" />
             <span className="font-medium hover:cursor-pointer">Sign Out</span>
           </button>
@@ -121,11 +153,11 @@ export default function UserLayout({ children }) {
               
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-semibold">
-                  JD
+                  {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-900">John Doe</p>
-                  <p className="text-xs text-gray-500">Viewer</p>
+                  <p className="text-sm font-medium text-gray-900">{user?.name || "User"}</p>
+                  <p className="text-xs text-gray-500">{user?.userType || "member"}</p>
                 </div>
               </div>
             </div>

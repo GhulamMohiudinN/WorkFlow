@@ -42,9 +42,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await authAPI.login(formData);
+      const data = await authAPI.login(formData);
       toast.success("Login successful!");
-      router.push("/dashboard");
+      const role = data.user?.userType || data.role || localStorage.getItem("role");
+
+      if (role === "member") {
+        router.push("/dashboardUsers");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
       toast.error(err.message || "Login failed. Please try again.");

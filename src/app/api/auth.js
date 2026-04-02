@@ -18,7 +18,9 @@ export const authAPI = {
         },
       ),
     );
-    localStorage.setItem("role", data.role || "admin");
+    // Ensure role comes from API user userType (member/admin) or fallback from data.role
+    const userType = data.user?.userType || data.role || "admin";
+    localStorage.setItem("role", userType);
     localStorage.setItem(
       "workspace",
       JSON.stringify(
@@ -161,10 +163,11 @@ export const authAPI = {
   },
 
   // Accept invitation
-  acceptInvitation: async (token) => {
-    const response = await api.post(`/users/accept-invitation/${token}`);
-    return response.data;
-  },
+acceptInvitation: async (data) => {
+  const response = await api.post("/users/accept-invitation", data);
+  return response.data;
+},
+
 };
 
 export default authAPI;
