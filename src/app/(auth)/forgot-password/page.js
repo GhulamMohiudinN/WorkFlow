@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
       setSuccessMessage(
         "A password reset link has been sent to your email. Please check your inbox.",
       );
-      toast.success("Reset instructions sent successfully.");
+      toast.success("Email sent. Reset your password.");
     } catch (err) {
       const message =
         err.response?.data?.message ||

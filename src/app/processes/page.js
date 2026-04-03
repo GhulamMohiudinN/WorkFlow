@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { processAPI } from "../api/processAPI";
 import { FiDelete, FiTrash2 } from "react-icons/fi";
-import { 
-  FiLayers, 
-  FiPlus, 
-  FiFilter, 
-  FiSearch, 
+import {
+  FiLayers,
+  FiPlus,
+  FiFilter,
+  FiSearch,
   FiClock,
   FiUsers,
   FiEdit2,
@@ -25,7 +25,7 @@ import {
   FiTag,
   FiDollarSign,
   FiZap,
-  FiAlertCircle
+  FiAlertCircle,
 } from "react-icons/fi";
 
 export default function ProcessesPage() {
@@ -46,7 +46,7 @@ export default function ProcessesPage() {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const filters = {};
         if (search) filters.search = search;
         if (filter !== "all") filters.status = filter;
@@ -67,11 +67,12 @@ export default function ProcessesPage() {
             visibility: process.visibility || "private",
             lastUpdated: formatDate(process.updatedAt),
             completion: calculateCompletion(process),
-            assignedTo: process.assignedTo?.map(a => a.name).join(", ") || "Unassigned",
+            assignedTo:
+              process.assignedTo?.map((a) => a.name).join(", ") || "Unassigned",
             color: getCategoryColor(process.category),
-            settings: process.settings
+            settings: process.settings,
           }));
-          
+
           setProcesses(transformedData);
         } else {
           setError(result.error || "Failed to load processes");
@@ -93,10 +94,14 @@ export default function ProcessesPage() {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'archived': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "draft":
+        return "bg-yellow-100 text-yellow-800";
+      case "archived":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -107,7 +112,7 @@ export default function ProcessesPage() {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -125,26 +130,29 @@ export default function ProcessesPage() {
   // Helper function to get category color
   const getCategoryColor = (category) => {
     const colors = {
-      'Onboarding': 'bg-blue-500',
-      'HR': 'bg-purple-500',
-      'Finance': 'bg-green-500',
-      'IT': 'bg-amber-500',
-      'Marketing': 'bg-pink-500',
-      'Sales': 'bg-indigo-500',
-      'Operations': 'bg-cyan-500',
-      'Customer Support': 'bg-red-500',
-      'Legal': 'bg-slate-500'
+      Onboarding: "bg-blue-500",
+      HR: "bg-purple-500",
+      Finance: "bg-green-500",
+      IT: "bg-amber-500",
+      Marketing: "bg-pink-500",
+      Sales: "bg-indigo-500",
+      Operations: "bg-cyan-500",
+      "Customer Support": "bg-red-500",
+      Legal: "bg-slate-500",
     };
-    return colors[category] || 'bg-gray-500';
+    return colors[category] || "bg-gray-500";
   };
 
-  const filteredProcesses = processes.filter(process => {
-    if (filter === "all") return true;
-    return process.status === filter;
-  }).filter(process => 
-    process.name.toLowerCase().includes(search.toLowerCase()) ||
-    process.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProcesses = processes
+    .filter((process) => {
+      if (filter === "all") return true;
+      return process.status === filter;
+    })
+    .filter(
+      (process) =>
+        process.name.toLowerCase().includes(search.toLowerCase()) ||
+        process.description.toLowerCase().includes(search.toLowerCase()),
+    );
 
   if (isLoading) {
     return (
@@ -158,7 +166,7 @@ export default function ProcessesPage() {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-6 px-6">
       {/* Error Alert */}
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -166,7 +174,9 @@ export default function ProcessesPage() {
             <FiAlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
           </div>
           <div className="flex-1">
-            <h3 className="font-medium text-red-900">Error Loading Processes</h3>
+            <h3 className="font-medium text-red-900">
+              Error Loading Processes
+            </h3>
             <p className="text-sm text-red-700 mt-1">{error}</p>
           </div>
           <button
@@ -181,7 +191,9 @@ export default function ProcessesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Processes</h1>
-          <p className="text-gray-600 mt-2">Create and manage your workflow processes</p>
+          <p className="text-gray-600 mt-2">
+            Create and manage your workflow processes
+          </p>
         </div>
         <div className="mt-4 md:mt-0">
           <Link
@@ -199,8 +211,12 @@ export default function ProcessesPage() {
         <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Processes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{processes.length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Processes
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {processes.length}
+              </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
               <FiLayers className="h-6 w-6 text-blue-600" />
@@ -211,8 +227,12 @@ export default function ProcessesPage() {
         <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Processes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{processes.filter(p => p.status === 'active').length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Processes
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {processes.filter((p) => p.status === "active").length}
+              </p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <FiTrendingUp className="h-6 w-6 text-green-600" />
@@ -223,9 +243,15 @@ export default function ProcessesPage() {
         <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Avg Completion</p>
+              <p className="text-sm font-medium text-gray-600">
+                Avg Completion
+              </p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {Math.round(processes.reduce((acc, p) => acc + p.completion, 0) / processes.length)}%
+                {Math.round(
+                  processes.reduce((acc, p) => acc + p.completion, 0) /
+                    processes.length,
+                )}
+                %
               </p>
             </div>
             <div className="bg-amber-100 p-3 rounded-lg">
@@ -278,7 +304,7 @@ export default function ProcessesPage() {
                 <option value="archived">Archived</option>
               </select>
             </div>
-            
+
             <div className="flex items-center space-x-1 border border-gray-300 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("grid")}
@@ -326,18 +352,29 @@ export default function ProcessesPage() {
       {viewMode === "grid" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProcesses.map((process) => (
-            <div key={process.id} className="bg-white rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
+            <div
+              key={process.id}
+              className="bg-white rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-all overflow-hidden"
+            >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`${process.color} h-12 w-12 rounded-lg flex items-center justify-center`}>
+                  <div
+                    className={`${process.color} h-12 w-12 rounded-lg flex items-center justify-center`}
+                  >
                     <FiLayers className="h-6 w-6 text-white" />
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full ${getStatusBadge(process.status)}`}>
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full ${getStatusBadge(process.status)}`}
+                  >
                     {process.status}
                   </span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{process.name}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{process.description}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {process.name}
+                </h3>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {process.description}
+                </p>
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center text-sm text-gray-600">
                     <FiClock className="h-4 w-4 mr-2" />
@@ -355,10 +392,15 @@ export default function ProcessesPage() {
                 <div className="mb-6">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">Completion</span>
-                    <span className="font-medium text-gray-900">{process.completion}%</span>
+                    <span className="font-medium text-gray-900">
+                      {process.completion}%
+                    </span>
                   </div>
                   <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${process.completion >= 80 ? 'bg-green-500' : process.completion >= 50 ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${process.completion}%` }}></div>
+                    <div
+                      className={`h-full ${process.completion >= 80 ? "bg-green-500" : process.completion >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
+                      style={{ width: `${process.completion}%` }}
+                    ></div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -383,12 +425,21 @@ export default function ProcessesPage() {
                     )}
                     <button
                       onClick={async () => {
-                        if (window.confirm(`Are you sure you want to delete "${process.name}"?`)) {
+                        if (
+                          window.confirm(
+                            `Are you sure you want to delete "${process.name}"?`,
+                          )
+                        ) {
                           setIsDeleting(true);
                           const targetId = process.rawId || process.id;
-                          const result = await processAPI.deleteProcess(targetId);
+                          const result =
+                            await processAPI.deleteProcess(targetId);
                           if (result.success) {
-                            setProcesses(processes.filter(p => (p.rawId || p.id) !== targetId));
+                            setProcesses(
+                              processes.filter(
+                                (p) => (p.rawId || p.id) !== targetId,
+                              ),
+                            );
                           } else {
                             setError(result.error);
                           }
@@ -402,7 +453,7 @@ export default function ProcessesPage() {
                       <FiTrash2 className="h-5 w-5" />
                     </button>
                   </div>
-                  {(process.rawId || process.id) ? (
+                  {process.rawId || process.id ? (
                     <Link
                       href={`/processes/${process.rawId || process.id}/edit`}
                       className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
@@ -427,12 +478,24 @@ export default function ProcessesPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Process</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Steps</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completion</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Process
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Steps
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Assigned To
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Completion
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -440,29 +503,46 @@ export default function ProcessesPage() {
                   <tr key={process.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className={`${process.color} h-10 w-10 rounded-lg flex items-center justify-center mr-3`}>
+                        <div
+                          className={`${process.color} h-10 w-10 rounded-lg flex items-center justify-center mr-3`}
+                        >
                           <FiLayers className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{process.name}</p>
-                          <p className="text-sm text-gray-500">{process.description.substring(0, 50)}...</p>
+                          <p className="font-medium text-gray-900">
+                            {process.name}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {process.description.substring(0, 50)}...
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs px-3 py-1 rounded-full ${getStatusBadge(process.status)}`}>
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full ${getStatusBadge(process.status)}`}
+                      >
                         {process.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{process.steps} steps</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{process.assignedTo}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {process.steps} steps
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {process.assignedTo}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="w-32">
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">{process.completion}%</span>
+                          <span className="text-gray-600">
+                            {process.completion}%
+                          </span>
                         </div>
                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div className={`h-full ${process.completion >= 80 ? 'bg-green-500' : process.completion >= 50 ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${process.completion}%` }}></div>
+                          <div
+                            className={`h-full ${process.completion >= 80 ? "bg-green-500" : process.completion >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
+                            style={{ width: `${process.completion}%` }}
+                          ></div>
                         </div>
                       </div>
                     </td>
@@ -476,12 +556,21 @@ export default function ProcessesPage() {
                         </Link>
                         <button
                           onClick={async () => {
-                            if (window.confirm(`Are you sure you want to delete \"${process.name}\"?`)) {
+                            if (
+                              window.confirm(
+                                `Are you sure you want to delete \"${process.name}\"?`,
+                              )
+                            ) {
                               setIsDeleting(true);
                               const targetId = process.rawId || process.id;
-                              const result = await processAPI.deleteProcess(targetId);
+                              const result =
+                                await processAPI.deleteProcess(targetId);
                               if (result.success) {
-                                setProcesses(processes.filter(p => (p.rawId || p.id) !== targetId));
+                                setProcesses(
+                                  processes.filter(
+                                    (p) => (p.rawId || p.id) !== targetId,
+                                  ),
+                                );
                               } else {
                                 setError(result.error);
                               }
@@ -508,14 +597,21 @@ export default function ProcessesPage() {
       {viewMode === "map" && (
         <div className="space-y-8">
           {filteredProcesses.map((process) => (
-            <div key={process.id} className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+            <div
+              key={process.id}
+              className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden"
+            >
               <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className={`${process.color} h-10 w-10 rounded-lg flex items-center justify-center mr-3`}>
+                  <div
+                    className={`${process.color} h-10 w-10 rounded-lg flex items-center justify-center mr-3`}
+                  >
                     <FiLayers className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{process.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {process.name}
+                    </h3>
                     <p className="text-sm text-gray-500">Process Map View</p>
                   </div>
                 </div>
@@ -536,33 +632,61 @@ export default function ProcessesPage() {
                 <div className="relative overflow-x-auto">
                   <div className="min-w-[800px]">
                     <div className="grid grid-cols-4 gap-4 mb-6">
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">HR Team</div>
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">IT Team</div>
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">Management</div>
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">Automated</div>
+                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
+                        HR Team
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
+                        IT Team
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
+                        Management
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
+                        Automated
+                      </div>
                     </div>
 
                     <div className="space-y-4">
-                      {process.activities.map((activity, idx) => (
-                        <div key={activity.id}>
+                      {(process.activities || []).map((activity, idx) => (
+                        <div key={activity?.id || `activity-${idx}`}>
                           <div className="grid grid-cols-4 gap-4">
-                            <div className={`${
-                              activity.assignee.includes('HR') ? 'col-span-1' : 
-                              activity.assignee.includes('IT') ? 'col-start-2' : 
-                              activity.assignee.includes('Manager') || activity.assignee.includes('Lead') ? 'col-start-3' : 
-                              activity.automation ? 'col-start-4' : 'col-span-1'
-                            }`}>
-                              <div className={`rounded-lg border-2 p-4 cursor-pointer hover:shadow-lg transition-all ${
-                                activity.type === 'decision' ? 'border-amber-400 bg-amber-50' :
-                                activity.type === 'parallel' ? 'border-green-400 bg-green-50' :
-                                'border-gray-200 bg-white'
-                              }`}>
+                            <div
+                              className={`${
+                                activity.assignee.includes("HR")
+                                  ? "col-span-1"
+                                  : activity.assignee.includes("IT")
+                                    ? "col-start-2"
+                                    : activity.assignee.includes("Manager") ||
+                                        activity.assignee.includes("Lead")
+                                      ? "col-start-3"
+                                      : activity.automation
+                                        ? "col-start-4"
+                                        : "col-span-1"
+                              }`}
+                            >
+                              <div
+                                className={`rounded-lg border-2 p-4 cursor-pointer hover:shadow-lg transition-all ${
+                                  activity.type === "decision"
+                                    ? "border-amber-400 bg-amber-50"
+                                    : activity.type === "parallel"
+                                      ? "border-green-400 bg-green-50"
+                                      : "border-gray-200 bg-white"
+                                }`}
+                              >
                                 <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-gray-900">{activity.name}</h4>
-                                  {activity.type === 'decision' && <FiAlertCircle className="h-5 w-5 text-amber-500" />}
-                                  {activity.type === 'parallel' && <FiZap className="h-5 w-5 text-green-500" />}
+                                  <h4 className="font-medium text-gray-900">
+                                    {activity.name}
+                                  </h4>
+                                  {activity.type === "decision" && (
+                                    <FiAlertCircle className="h-5 w-5 text-amber-500" />
+                                  )}
+                                  {activity.type === "parallel" && (
+                                    <FiZap className="h-5 w-5 text-green-500" />
+                                  )}
                                 </div>
-                                <p className="text-sm text-gray-600 mb-2">Assigned to: {activity.assignee}</p>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  Assigned to: {activity.assignee}
+                                </p>
                                 <div className="flex items-center justify-between text-xs text-gray-500">
                                   <span className="flex items-center">
                                     <FiClock className="h-3 w-3 mr-1" />
@@ -570,8 +694,8 @@ export default function ProcessesPage() {
                                   </span>
                                   {showTimeframe && (
                                     <span className="flex items-center">
-                                      <FiDollarSign className="h-3 w-3 mr-1" />
-                                      ${activity.cost}
+                                      <FiDollarSign className="h-3 w-3 mr-1" />$
+                                      {activity.cost}
                                     </span>
                                   )}
                                   {showTags && (
@@ -613,9 +737,16 @@ export default function ProcessesPage() {
           <div className="bg-amber-50 rounded-full p-6 w-fit mx-auto mb-4">
             <FiLayers className="h-12 w-12 text-amber-500" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No processes found</h3>
-          <p className="text-gray-600 mb-6">Create your first process to get started</p>
-          <Link href="/processes/new" className="inline-flex items-center px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No processes found
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Create your first process to get started
+          </p>
+          <Link
+            href="/processes/new"
+            className="inline-flex items-center px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+          >
             <FiPlus className="mr-2 h-5 w-5" />
             Create New Process
           </Link>
@@ -628,8 +759,19 @@ export default function ProcessesPage() {
 // Helper component for missing icon
 function FiCheckCircle(props) {
   return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
     </svg>
   );
 }

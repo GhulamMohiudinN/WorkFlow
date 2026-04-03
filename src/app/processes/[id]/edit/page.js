@@ -143,6 +143,7 @@ export default function EditProcessPage() {
             steps: Array.isArray(process.steps)
               ? process.steps.map((step, index) => ({
                   id: step._id || `step-${index}`,
+                  _id: step._id || null,
                   title: step.title?.toString() || "",
                   description: step.description?.toString() || "",
                   timeEstimate: step.timeEstimate?.toString() || "1 hour",
@@ -200,59 +201,74 @@ export default function EditProcessPage() {
   };
 
   const addNewStep = () => {
-    const newStepId = formData.steps.length + 1;
-    setFormData((prev) => ({
-      ...prev,
-      steps: [
-        ...prev.steps,
-        {
-          id: newStepId,
-          title: `Step ${newStepId}`,
-          description: "Describe this step...",
-          assignee: "",
-          timeEstimate: "1 hour",
-          order: newStepId,
-          notes: "",
-        },
-      ],
-    }));
+    setFormData((prev) => {
+      const nextOrder = prev.steps.length + 1;
+      return {
+        ...prev,
+        steps: [
+          ...prev.steps,
+          {
+            id: `step-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+            _id: null,
+            title: `Step ${nextOrder}`,
+            description: "Describe this step...",
+            assignee: "",
+            timeEstimate: "1 hour",
+            order: nextOrder,
+            notes: "",
+            status: "pending",
+          },
+        ],
+      };
+    });
   };
 
   const removeStep = (stepId) => {
-    if (formData.steps.length > 1) {
-      setFormData((prev) => ({
+    setFormData((prev) => {
+      if (prev.steps.length <= 1) return prev;
+
+      const filtered = prev.steps.filter((step) => step.id !== stepId);
+      return {
         ...prev,
-        steps: prev.steps.filter((step) => step.id !== stepId),
-      }));
-    }
+        steps: filtered.map((step, index) => ({
+          ...step,
+          order: index + 1,
+        })),
+      };
+    });
   };
 
   const moveStepUp = (index) => {
     if (index > 0) {
-      const newSteps = [...formData.steps];
-      [newSteps[index], newSteps[index - 1]] = [
-        newSteps[index - 1],
-        newSteps[index],
-      ];
-      newSteps.forEach((step, idx) => {
-        step.order = idx + 1;
+      setFormData((prev) => {
+        const newSteps = [...prev.steps];
+        [newSteps[index], newSteps[index - 1]] = [
+          newSteps[index - 1],
+          newSteps[index],
+        ];
+        return {
+          ...prev,
+          steps: newSteps.map((step, idx) => ({ ...step, order: idx + 1 })),
+        };
       });
-      setFormData((prev) => ({ ...prev, steps: newSteps }));
     }
   };
 
   const moveStepDown = (index) => {
-    if (index < formData.steps.length - 1) {
-      const newSteps = [...formData.steps];
-      [newSteps[index], newSteps[index + 1]] = [
-        newSteps[index + 1],
-        newSteps[index],
-      ];
-      newSteps.forEach((step, idx) => {
-        step.order = idx + 1;
-      });
-      setFormData((prev) => ({ ...prev, steps: newSteps }));
-    }
+    setFormData((prev) => {
+      if (index < prev.steps.length - 1) {
+        const newSteps = [...prev.steps];
+        [newSteps[index], newSteps[index + 1]] = [
+          newSteps[index + 1],
+          newSteps[index],
+        ];
+        return {
+          ...prev,
+          steps: newSteps.map((step, idx) => ({ ...step, order: idx + 1 })),
+        };
+      }
+      return prev;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -855,7 +871,10 @@ export default function EditProcessPage() {
                     <p className="text-sm text-gray-500">
                       Supports PDF, DOC, XLS up to 10MB each
                     </p>
-                    <button className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <button
+                      type="button"
+                      className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
                       Browse Files
                     </button>
                   </div>

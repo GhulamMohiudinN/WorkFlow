@@ -32,7 +32,7 @@ function EmailVerificationContent() {
       const data = await authAPI.verifyEmail(verificationToken);
       toast.success(
         data?.message ||
-          "Email verified successfully! Redirecting to workspace setup...",
+          "Verified! Setting up your workspace…",
       );
       sessionStorage.removeItem("userData");
       setTimeout(() => {
@@ -73,9 +73,9 @@ function EmailVerificationContent() {
       setResending(true);
       if (userData?.email) {
         await authAPI.resendVerification(userData.email);
-        toast.success("Verification email sent successfully!");
+        toast.success("Verification email sent.");
       } else {
-        toast.error("Email not found. Please signup again.");
+        toast.error("Email not found. Sign up to continue.");
         router.push("/signup");
         return;
       }

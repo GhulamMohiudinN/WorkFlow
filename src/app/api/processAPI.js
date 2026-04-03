@@ -422,11 +422,14 @@ function transformFormDataToAPI(formData) {
       },
     },
     steps: (formData.steps || []).map((step) => ({
+      _id: step._id || step.id,
       title: step.title,
       description: step.description,
       timeEstimate: step.timeEstimate,
       notes: step.notes || "",
       status: step.status || "pending",
+      order: step.order,
+      assignee: step.assignee || "",
     })),
   };
 }

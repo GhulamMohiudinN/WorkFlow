@@ -51,7 +51,7 @@ export default function SignupPage() {
         sessionStorage.setItem("userData", JSON.stringify(result.user));
       }
       toast.success(
-        "Account created successfully! Please check your email for verification.",
+        "Account created. Verify your email to continue",
         {
           duration: 4000,
           position: "top-right",
