@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { processAPI } from "../api/processAPI";
-import { FiDelete, FiTrash2 } from "react-icons/fi";
 import {
+  FiX,
+  FiCheckCircle as FiCheck,
+  FiTrash2,
+  FiAlertCircle,
   FiLayers,
   FiPlus,
   FiFilter,
@@ -25,7 +28,6 @@ import {
   FiTag,
   FiDollarSign,
   FiZap,
-  FiAlertCircle,
 } from "react-icons/fi";
 
 export default function ProcessesPage() {
@@ -71,6 +73,7 @@ export default function ProcessesPage() {
               process.assignedTo?.map((a) => a.name).join(", ") || "Unassigned",
             color: getCategoryColor(process.category),
             settings: process.settings,
+            createdBy: process.createdBy || { name: "System Admin" }, // Fallback if missing
           }));
 
           setProcesses(transformedData);
@@ -141,6 +144,20 @@ export default function ProcessesPage() {
       Legal: "bg-slate-500",
     };
     return colors[category] || "bg-gray-500";
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+    const targetId = deleteConfirm.rawId || deleteConfirm.id;
+    const result = await processAPI.deleteProcess(targetId);
+    if (result.success) {
+      setProcesses(processes.filter((p) => (p.rawId || p.id) !== targetId));
+      setDeleteConfirm(null);
+    } else {
+      setError(result.error);
+    }
+    setIsDeleting(false);
   };
 
   const filteredProcesses = processes
@@ -269,7 +286,7 @@ export default function ProcessesPage() {
               </p>
             </div>
             <div className="bg-purple-100 p-3 rounded-lg">
-              <FiCheckCircle className="h-6 w-6 text-purple-600" />
+              <FiCheck className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -389,6 +406,16 @@ export default function ProcessesPage() {
                     <span>{process.steps} steps</span>
                   </div>
                 </div>
+                
+                {/* Creator Info */}
+                <div className="flex items-center gap-2 mb-6 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                  <Avatar name={process.createdBy?.name || "User"} />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight leading-none mb-0.5">Created By</p>
+                    <p className="text-xs font-semibold text-gray-700 truncate">{process.createdBy?.name || "Talha"}</p>
+                  </div>
+                </div>
+
                 <div className="mb-6">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">Completion</span>
@@ -424,29 +451,8 @@ export default function ProcessesPage() {
                       <span className="text-xs text-red-500">ID missing</span>
                     )}
                     <button
-                      onClick={async () => {
-                        if (
-                          window.confirm(
-                            `Are you sure you want to delete "${process.name}"?`,
-                          )
-                        ) {
-                          setIsDeleting(true);
-                          const targetId = process.rawId || process.id;
-                          const result =
-                            await processAPI.deleteProcess(targetId);
-                          if (result.success) {
-                            setProcesses(
-                              processes.filter(
-                                (p) => (p.rawId || p.id) !== targetId,
-                              ),
-                            );
-                          } else {
-                            setError(result.error);
-                          }
-                          setIsDeleting(false);
-                        }
-                      }}
-                      className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                      onClick={() => setDeleteConfirm(process)}
+                      className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
                       disabled={isDeleting}
                       title="Delete process"
                     >
@@ -555,29 +561,8 @@ export default function ProcessesPage() {
                           <FiEdit2 className="h-5 w-5" />
                         </Link>
                         <button
-                          onClick={async () => {
-                            if (
-                              window.confirm(
-                                `Are you sure you want to delete \"${process.name}\"?`,
-                              )
-                            ) {
-                              setIsDeleting(true);
-                              const targetId = process.rawId || process.id;
-                              const result =
-                                await processAPI.deleteProcess(targetId);
-                              if (result.success) {
-                                setProcesses(
-                                  processes.filter(
-                                    (p) => (p.rawId || p.id) !== targetId,
-                                  ),
-                                );
-                              } else {
-                                setError(result.error);
-                              }
-                              setIsDeleting(false);
-                            }
-                          }}
-                          className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                          onClick={() => setDeleteConfirm(process)}
+                          className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
                           disabled={isDeleting}
                           title="Delete process"
                         >
@@ -752,26 +737,104 @@ export default function ProcessesPage() {
           </Link>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <DeleteProcessModal
+          process={deleteConfirm}
+          loading={isDeleting}
+          onClose={() => setDeleteConfirm(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI Components
+// ─────────────────────────────────────────────────────────────────────────────
+
+function DeleteProcessModal({ process, loading, onClose, onConfirm }) {
+  return (
+    <ModalShell title="Delete Process" onClose={onClose} accentFrom="from-red-500" accentTo="to-red-600">
+      <div className="p-6 text-center">
+        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FiAlertCircle className="h-8 w-8" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Process?</h3>
+        <p className="text-gray-600 mb-8 max-w-sm mx-auto">
+          Are you sure you want to delete <span className="font-semibold">"{process.name}"</span>? This action cannot be undone.
+        </p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium transition-all flex items-center justify-center gap-2 shadow-md shadow-red-500/20"
+          >
+            {loading ? (
+              <><Spinner size="h-4 w-4" cls="border-white" /> Deleting...</>
+            ) : (
+              <><FiTrash2 className="h-4 w-4" /> Delete Process</>
+            )}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function ModalShell({ title, accentFrom, accentTo, onClose, children }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm shadow-inner" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className={`bg-gradient-to-r ${accentFrom} ${accentTo} px-6 py-4 flex items-center justify-between`}>
+          <h2 className="text-white font-bold">{title}</h2>
+          <button onClick={onClose} className="text-white/75 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <FiX className="h-5 w-5" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Spinner({ size = "h-5 w-5", cls = "border-amber-500" }) {
+  return (
+    <div className={`${size} animate-spin rounded-full border-2 ${cls} border-t-transparent`} />
+  );
+}
+
+function Avatar({ name = "", size = "h-8 w-8", textCls = "text-[10px]" }) {
+  // Simple hash for consistent colors
+  const colors = ["bg-amber-500", "bg-blue-500", "bg-emerald-500", "bg-rose-500", "bg-indigo-500", "bg-purple-500"];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const color = colors[Math.abs(hash) % colors.length];
+
+  return (
+    <div className={`${size} ${color} rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm`}>
+      <span className={`text-white font-bold leading-none ${textCls}`}>
+        {name?.charAt(0)?.toUpperCase() || "?"}
+      </span>
     </div>
   );
 }
 
 // Helper component for missing icon
-function FiCheckCircle(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-  );
-}
+

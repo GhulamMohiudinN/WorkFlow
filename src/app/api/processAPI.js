@@ -140,13 +140,13 @@ export const processAPI = {
       let response;
 
       try {
-        response = await api.patch(`/process/update/${processId}`, payload);
+        response = await api.patch(`/process/update/${processId}`, payload, { timeout: 30000 });
       } catch (firstError) {
         if (
           firstError.response?.status === 404 ||
           firstError.response?.status === 400
         ) {
-          response = await api.put(`/process/${processId}`, payload);
+          response = await api.put(`/process/${processId}`, payload, { timeout: 30000 });
         } else {
           throw firstError;
         }
@@ -421,13 +421,16 @@ function transformFormDataToAPI(formData) {
         escalateOverdueTasks: formData.automation?.escalation ?? false,
       },
     },
+    assignedTo: (formData.assignedTo || []).map(a => 
+      typeof a === "string" ? a : a._id || a.id
+    ),
     steps: (formData.steps || []).map((step) => ({
-      _id: step._id || step.id,
+      _id: step._id || (step.id?.toString().startsWith('step-') ? null : step.id),
       title: step.title,
       description: step.description,
       timeEstimate: step.timeEstimate,
       notes: step.notes || "",
-      status: step.status || "pending",
+      status: step.status || "draft",
       order: step.order,
       assignee: step.assignee || "",
     })),

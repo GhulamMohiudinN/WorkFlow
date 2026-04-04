@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { processAPI } from "../../api/processAPI";
+import { userAPI } from "../../api/userAPI";
 import {
   FiLayers,
   FiPlus,
@@ -66,6 +67,8 @@ export default function NewProcessPage() {
   });
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [workspaceUsers, setWorkspaceUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   const categories = [
     "Onboarding",
@@ -78,36 +81,7 @@ export default function NewProcessPage() {
     "Customer Support",
     "Legal",
   ];
-  const teamMembers = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@company.com",
-      role: "admin",
-      avatar: "JD",
-    },
-    {
-      id: 2,
-      name: "Sarah Chen",
-      email: "sarah@company.com",
-      role: "editor",
-      avatar: "SC",
-    },
-    {
-      id: 3,
-      name: "Mike Wilson",
-      email: "mike@company.com",
-      role: "viewer",
-      avatar: "MW",
-    },
-    {
-      id: 4,
-      name: "Emma Davis",
-      email: "emma@company.com",
-      role: "editor",
-      avatar: "ED",
-    },
-  ];
+
 
   const steps = [
     { number: 1, title: "Basic Info", description: "Process details" },
@@ -115,6 +89,24 @@ export default function NewProcessPage() {
     { number: 3, title: "Assignments", description: "Assign team members" },
     { number: 4, title: "Settings", description: "Configure options" },
   ];
+
+  // ── Fetch Workspace Users ──────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true);
+        const result = await userAPI.getWorkspaceUsers({ limit: 100 });
+        if (result.success) {
+          setWorkspaceUsers(result.users || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch workspace users:", err);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -516,11 +508,11 @@ export default function NewProcessPage() {
                       onChange={(e) =>
                         handleStepChange(step.id, "assignee", e.target.value)
                       }
-                      className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
+                      className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500 bg-white"
                     >
                       <option value="">Select team member</option>
-                      {teamMembers.map((member) => (
-                        <option key={member.id} value={member.email}>
+                      {workspaceUsers.map((member) => (
+                        <option key={member._id} value={member._id}>
                           {member.name} ({member.role})
                         </option>
                       ))}
@@ -563,47 +555,53 @@ export default function NewProcessPage() {
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {teamMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className={`border rounded-xl p-4 cursor-pointer transition-all ${
-                      formData.assignedTo.includes(member.email)
-                        ? "border-amber-500 bg-amber-50 shadow-sm"
-                        : "border-gray-200 hover:border-amber-300 hover:bg-amber-50/30"
-                    }`}
-                    onClick={() => {
-                      const newAssigned = formData.assignedTo.includes(
-                        member.email,
-                      )
-                        ? formData.assignedTo.filter(
-                            (email) => email !== member.email,
-                          )
-                        : [...formData.assignedTo, member.email];
-                      handleInputChange("assignedTo", newAssigned);
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
+                {loadingUsers ? (
+                  <div className="col-span-2 py-12 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mb-2"></div>
+                    <p className="text-sm text-gray-500">Fetching workspace members...</p>
+                  </div>
+                ) : workspaceUsers.length === 0 ? (
+                  <div className="col-span-2 py-12 text-center bg-gray-50 rounded-2xl">
+                    <FiUsers className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No team members found</p>
+                  </div>
+                ) : (
+                  workspaceUsers.map((member) => (
+                    <div
+                      key={member._id}
+                      className={`border rounded-xl p-4 cursor-pointer transition-all flex items-center gap-3 ${
+                        formData.assignedTo.includes(member._id)
+                          ? "border-amber-500 bg-amber-50 shadow-sm"
+                          : "border-gray-200 hover:border-amber-300 hover:bg-amber-50/30"
+                      }`}
+                      onClick={() => {
+                        const newAssigned = formData.assignedTo.includes(member._id)
+                          ? formData.assignedTo.filter(id => id !== member._id)
+                          : [...formData.assignedTo, member._id];
+                        handleInputChange("assignedTo", newAssigned);
+                      }}
+                    >
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          formData.assignedTo.includes(member.email)
+                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          formData.assignedTo.includes(member._id)
                             ? "bg-amber-500 text-white"
                             : "bg-gray-200 text-gray-600"
                         }`}
                       >
-                        {formData.assignedTo.includes(member.email) ? (
+                        {formData.assignedTo.includes(member._id) ? (
                           <FiCheck className="h-5 w-5" />
                         ) : (
-                          <span className="font-semibold">{member.avatar}</span>
+                          <span className="font-semibold">{member.name?.charAt(0).toUpperCase()}</span>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 truncate">
                           {member.name}
                         </p>
-                        <p className="text-sm text-gray-500">{member.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{member.email}</p>
                       </div>
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
                           member.role === "admin"
                             ? "bg-purple-100 text-purple-700"
                             : member.role === "editor"
@@ -614,8 +612,8 @@ export default function NewProcessPage() {
                         {member.role}
                       </span>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 

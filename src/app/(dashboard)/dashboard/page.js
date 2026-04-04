@@ -185,8 +185,8 @@ export default function DashboardPage() {
                 Add Team Member
               </Link>
               <Link
-                href="#"
-                className="cursor-not-allowed inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all duration-200"
+                href="/processes"
+                className=" inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all duration-200"
               >
                 <FiPlus className="mr-2 h-5 w-5" />
                 New Process
