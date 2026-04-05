@@ -4,6 +4,7 @@ import Link from "next/link";
 import { socket } from "../../utils/socket";
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
+import workspaceAPI from "../../api/workspaceAPI";
 import {
   FiUsers,
   FiLayers,
@@ -20,18 +21,66 @@ import {
   FiEye,
   FiEdit,
   FiSettings,
+  FiRefreshCw,
 } from "react-icons/fi";
+
+const formatTimeAgo = (dateString) => {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffInMs = now - past;
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInMinutes < 1) return "Just now";
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  if (diffInDays === 1) return "Yesterday";
+  return past.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+const getActivityIcon = (action) => {
+  switch (action) {
+    case "invite_member":
+      return <FiUserPlus className="h-5 w-5 text-blue-600" />;
+    case "create_process":
+      return <FiLayers className="h-5 w-5 text-purple-600" />;
+    case "update_process":
+      return <FiEdit className="h-5 w-5 text-amber-600" />;
+    case "complete_task":
+      return <FiCheckCircle className="h-5 w-5 text-green-600" />;
+    default:
+      return <FiActivity className="h-5 w-5 text-gray-600" />;
+  }
+};
+
+const getActivityBgColor = (action) => {
+  switch (action) {
+    case "invite_member":
+      return "bg-blue-100";
+    case "create_process":
+      return "bg-purple-100";
+    case "update_process":
+      return "bg-amber-100";
+    case "complete_task":
+      return "bg-green-100";
+    default:
+      return "bg-gray-100";
+  }
+};
 
 export default function DashboardPage() {
   const [workspace, setWorkspace] = useState(null);
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadDashboardData = () => {
+    const initDashboard = async () => {
       try {
+        setLoading(true);
         const storedUser = localStorage.getItem("user");
         const storedRole = localStorage.getItem("role");
         const storedWorkspace = localStorage.getItem("workspace");
@@ -40,114 +89,25 @@ export default function DashboardPage() {
           setUser(JSON.parse(storedUser));
           setRole(storedRole);
           setWorkspace(JSON.parse(storedWorkspace));
-        } else {
-          setError("No user data found");
         }
-        setLoading(false);
+
+        // Fetch Overview Data
+        const overviewData = await workspaceAPI.getWorkspaceOverview();
+        if (overviewData.success) {
+          setOverview(overviewData);
+        } else {
+          throw new Error("Failed to fetch overview data");
+        }
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
-        setError("Failed to load dashboard data");
+        console.error("Dashboard Initialization Error:", err);
+        setError("Unable to load latest dashboard metrics. Please try again.");
+      } finally {
         setLoading(false);
       }
     };
 
-    loadDashboardData();
+    initDashboard();
   }, []);
-
-  if (loading) {
-    return (
-      <div className="py-6">
-        <div className="text-center">Loading dashboard...</div>
-      </div>
-    );
-  }
-
-  if (error && !workspace) {
-    return (
-      <div className="py-6">
-        <div className="text-center text-red-600">{error}</div>
-      </div>
-    );
-  }
-
-  const company = {
-    name: "TechFlow Inc",
-    email: "contact@techflow.com",
-    members: workspace?.members?.length || 8,
-    processes: 12,
-  };
-
-  const users = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@techflow.com",
-      role: "admin",
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "Sarah Chen",
-      email: "sarah@techflow.com",
-      role: "editor",
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Mike Wilson",
-      email: "mike@techflow.com",
-      role: "viewer",
-      status: "active",
-    },
-    {
-      id: 4,
-      name: "Emma Davis",
-      email: "emma@techflow.com",
-      role: "editor",
-      status: "active",
-    },
-    {
-      id: 5,
-      name: "Alex Kim",
-      email: "alex@techflow.com",
-      role: "viewer",
-      status: "inactive",
-    },
-  ];
-
-  const stats = {
-    totalUsers: 8,
-    activeProcesses: 12,
-    completedTasks: 48,
-    pendingTasks: 5,
-  };
-
-  const activities = [
-    {
-      id: 1,
-      type: "company_created",
-      message: "Workspace created for TechFlow Inc",
-      time: "Today, 9:42 AM",
-    },
-    {
-      id: 2,
-      type: "user_added",
-      message: "Sarah Chen added as Editor",
-      time: "Today, 10:15 AM",
-    },
-    {
-      id: 3,
-      type: "process_created",
-      message: "New onboarding process created",
-      time: "Today, 11:30 AM",
-    },
-    {
-      id: 4,
-      type: "task_completed",
-      message: "Employee handbook review completed",
-      time: "Yesterday, 3:45 PM",
-    },
-  ];
 
   const getRoleColor = (role) => {
     switch (role) {
@@ -162,6 +122,36 @@ export default function DashboardPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="py-12 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
+        <p className="text-gray-500 font-medium">Preparing your workspace...</p>
+      </div>
+    );
+  }
+
+  if (error && !overview) {
+    return (
+      <div className="py-12 px-4 max-w-lg mx-auto text-center">
+        <div className="bg-red-50 p-6 rounded-2xl border border-red-100">
+          <FiAlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <FiRefreshCw className="mr-2" />
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const workspaceName = workspace?.name || "Your Workspace";
+
   return (
     <div className="py-6">
       {/* Welcome Banner */}
@@ -169,7 +159,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome to {company.name}
+              Welcome to {workspaceName}
             </h1>
             <p className="text-gray-600 mt-2">
               Manage your team, create processes, and optimize workflows
@@ -203,7 +193,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Team Members</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                0
+                {overview?.members?.total || 0}
               </p>
             </div>
             <div className="bg-amber-100 p-3 rounded-lg">
@@ -212,8 +202,8 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4">
             <Link
-              href="#"
-              className="cursor-not-allowed inline-flex items-center text-sm text-amber-600 hover:text-amber-700"
+              href="/users"
+              className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
             >
               View all members
               <FiChevronRight className="ml-1 h-4 w-4" />
@@ -228,7 +218,7 @@ export default function DashboardPage() {
                 Active Processes
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.activeProcesses}
+                {overview?.processes?.active?.total || 0}
               </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
@@ -237,8 +227,8 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4">
             <Link
-              href="#"
-              className="cursor-not-allowed inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+              href="/processes"
+              className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               View processes
               <FiChevronRight className="ml-1 h-4 w-4" />
@@ -251,7 +241,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.pendingTasks}
+                {overview?.processes?.pending?.total || 0}
               </p>
             </div>
             <div className="bg-yellow-100 p-3 rounded-lg">
@@ -259,7 +249,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="flex items-center text-sm text-yellow-600">
+            <div className="flex items-center text-sm text-yellow-600 font-medium">
               <FiAlertCircle className="h-4 w-4 mr-1" />
               <span>Awaiting action</span>
             </div>
@@ -270,10 +260,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
-                Completed Tasks
+                Completed Processes
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.completedTasks}
+                {overview?.processes?.completed?.total || 0}
               </p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
@@ -281,9 +271,9 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="flex items-center text-sm text-green-600">
+            <div className="flex items-center text-sm text-green-600 font-medium">
               <FiTrendingUp className="h-4 w-4 mr-1" />
-              <span>+15% from last week</span>
+              <span>Track progress</span>
             </div>
           </div>
         </div>
@@ -292,103 +282,109 @@ export default function DashboardPage() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Activity */}
-        <div className="lg:col-span-2 ">
-          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
-            <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Activity
-              </h2>
-              <Link
-                href="#"
-                className="cursor-not-allowed text-sm text-amber-600 hover:text-amber-700 font-medium"
-              >
-                View all
-              </Link>
-            </div>
-            <div className="p-6">
+        <div className="lg:col-span-2 shadow-sm bg-white rounded-2xl border border-amber-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Recent Activity
+            </h2>
+            <Link
+              href="/activity-logs"
+              className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+            >
+              View all logs
+            </Link>
+          </div>
+          <div className="p-6">
+            {overview?.recentActivities?.length > 0 ? (
               <div className="space-y-6">
-                {activities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-4">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        activity.type === "company_created"
-                          ? "bg-amber-100"
-                          : activity.type === "user_added"
-                            ? "bg-blue-100"
-                            : activity.type === "process_created"
-                              ? "bg-purple-100"
-                              : "bg-green-100"
-                      }`}
-                    >
-                      {activity.type === "company_created" && (
-                        <FiActivity className="h-5 w-5 text-amber-600" />
-                      )}
-                      {activity.type === "user_added" && (
-                        <FiUserPlus className="h-5 w-5 text-blue-600" />
-                      )}
-                      {activity.type === "process_created" && (
-                        <FiLayers className="h-5 w-5 text-purple-600" />
-                      )}
-                      {activity.type === "task_completed" && (
-                        <FiCheckCircle className="h-5 w-5 text-green-600" />
-                      )}
+                {overview.recentActivities.map((activity) => (
+                  <div key={activity._id} className="flex items-start space-x-4">
+                    <div className={`p-2.5 rounded-xl ${getActivityBgColor(activity.action)}`}>
+                      {getActivityIcon(activity.action)}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-gray-900">
+                      <p className="text-sm font-medium text-gray-800 leading-tight">
                         {activity.message}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {activity.time}
-                      </p>
+                      <div className="flex items-center mt-1.5 space-x-2">
+                        <span className="text-xs text-gray-400">
+                          {formatTimeAgo(activity.createdAt)}
+                        </span>
+                        {activity.userName && (
+                          <>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-xs text-amber-600 font-medium">
+                              {activity.userName}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="bg-gray-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+                  <FiActivity className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">No recent activity found</p>
+                <p className="text-sm text-gray-400 mt-1">Activities will appear here as you work</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Team Overview */}
-        <div>
-          {workspace?.members?.length > 0 && (
-            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm">
-              <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Team Overview
-                </h2>
-                <Link
-                  href="#"
-                  className="cursor-not-allowed text-sm text-amber-600 hover:text-amber-700 font-medium"
-                >
-                  View all
-                </Link>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {workspace.members.map((memberDetail) => {
-                    if (memberDetail?.memberId?._id === user?._id) return null;
-
+        {/* Side Panel: Team & Quick Actions */}
+        <div className="space-y-6">
+          {/* Team Overview */}
+          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Team Members
+              </h2>
+              <Link
+                href="/users"
+                className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+              >
+                See All
+              </Link>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {workspace?.members?.length > 0 ? (
+                  workspace.members.slice(0, 5).map((memberDetail) => {
+                    const isSelf = memberDetail?.memberId?._id === user?._id;
                     return (
                       <div
                         key={memberDetail?.memberId?._id}
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                        className={`flex items-center justify-between p-2 rounded-xl transition-all duration-200 ${
+                          isSelf ? "bg-amber-50/50 ring-1 ring-amber-100" : "hover:bg-gray-50"
+                        }`}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-                              <span className="text-white font-semibold">
-                                {memberDetail?.memberId?.name?.charAt(0)}
-                              </span>
-                            </div>
+                          <div className="shrink-0 relative">
+                            {memberDetail?.memberId?.profilePicture ? (
+                              <img 
+                                src={memberDetail.memberId.profilePicture} 
+                                alt={memberDetail.memberId.name}
+                                className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                {memberDetail?.memberId?.name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
                           </div>
 
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
+                          <div className="overflow-hidden">
+                            <p className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">
                               {memberDetail.memberId?.name}
+                              {isSelf && <span className="ml-1 text-[10px] text-amber-700 font-bold uppercase tracking-wider">(You)</span>}
                             </p>
-
                             <span
-                              className={`text-xs px-2 py-1 rounded-full ${getRoleColor(
+                              className={`text-[10px] uppercase font-bold tracking-tight px-2 py-0.5 rounded-md inline-block mt-0.5 ${getRoleColor(
                                 memberDetail.role,
                               )}`}
                             >
@@ -397,54 +393,74 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <FiChevronRight className="h-5 w-5 text-gray-400" />
+                        <FiChevronRight className="h-4 w-4 text-gray-300" />
                       </div>
                     );
-                  })}
-                  <Link
-                    href="/users/add"
-                    className="flex items-center justify-center w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-amber-600 hover:border-amber-300 transition-all duration-200"
-                  >
-                    <FiPlus className="mr-2 h-5 w-5" />
-                    Add more members
-                  </Link>
-                </div>
+                  })
+                ) : (
+                  <div className="text-center py-4 bg-gray-50 rounded-xl">
+                    <p className="text-xs text-gray-500">No other members yet</p>
+                  </div>
+                )}
+                
+                <Link
+                  href="/users/add"
+                  className="flex items-center justify-center w-full p-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50/30 transition-all duration-200 group"
+                >
+                  <FiPlus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium">Invite team member</span>
+                </Link>
               </div>
             </div>
-          )}
+          </div>
+
           {/* Quick Actions */}
-          <div className="mt-6 bg-linear-to-r from-amber-500 to-amber-600 rounded-2xl p-6 text-white">
-            <h3 className="font-semibold mb-4">Quick Actions</h3>
-            <div className="space-y-3">
+          <div className="bg-white rounded-3xl p-7 text-gray-900 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500"></div>
+            
+            <h3 className="text-lg font-bold mb-5 flex items-center">
+              <FiSettings className="mr-2 text-amber-400 animate-pulse-slow" />
+              Quick Actions
+            </h3>
+            
+            <div className="space-y-3 relative z-10">
               <Link
                 href="/users/add"
-                className="flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200"
+                className="flex items-center justify-between p-3.5  backdrop-blur-md rounded-2xl transition-all duration-300 border hover:border-amber-600 border-amber-200"
               >
                 <div className="flex items-center">
-                  <FiUserPlus className="mr-3 h-5 w-5" />
-                  <span>Invite team member</span>
+                  <div className="h-9 w-9 rounded-xl bg-amber-500/20 flex items-center justify-center mr-3">
+                    <FiUserPlus className="h-4.5 w-4.5 text-amber-400" />
+                  </div>
+                  <span className="text-sm font-medium">Invite member</span>
                 </div>
-                <FiChevronRight className="h-5 w-5" />
+                <FiChevronRight className="h-4 w-4 opacity-50" />
               </Link>
+              
               <Link
-                href="#"
-                className="cursor-not-allowed flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200"
+                href="/processes"
+                className="flex items-center justify-between p-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all duration-300 border hover:border-amber-600 border-amber-200"
               >
                 <div className="flex items-center">
-                  <FiLayers className="mr-3 h-5 w-5" />
-                  <span>Create process</span>
+                  <div className="h-9 w-9 rounded-xl bg-blue-500/20 flex items-center justify-center mr-3">
+                    <FiLayers className="h-4.5 w-4.5 text-blue-400" />
+                  </div>
+                  <span className="text-sm font-medium">Start process</span>
                 </div>
-                <FiChevronRight className="h-5 w-5" />
+                <FiChevronRight className="h-4 w-4 opacity-50" />
               </Link>
+              
               <Link
-                href="#"
-                className="cursor-not-allowed flex items-center justify-between p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors duration-200"
+                href="/company"
+                className="flex items-center justify-between p-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all duration-300 border hover:border-amber-600 border-amber-200 "
               >
                 <div className="flex items-center">
-                  <FiSettings className="mr-3 h-5 w-5" />
-                  <span>Company settings</span>
+                  <div className="h-9 w-9 rounded-xl bg-purple-500/20 flex items-center justify-center mr-3">
+                    <FiSettings className="h-4.5 w-4.5 text-purple-400" />
+                  </div>
+                  <span className="text-sm font-medium">Settings</span>
                 </div>
-                <FiChevronRight className="h-5 w-5" />
+                <FiChevronRight className="h-4 w-4 opacity-50" />
               </Link>
             </div>
           </div>

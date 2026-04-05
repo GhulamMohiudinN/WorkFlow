@@ -24,6 +24,7 @@ import {
   FiEdit2,
   FiEye,
   FiCopy,
+  FiChevronDown,
 } from "react-icons/fi";
 
 export default function EditProcessPage() {
@@ -67,43 +68,7 @@ export default function EditProcessPage() {
     "Customer Support",
     "Legal",
   ];
-  const teamMembers = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@company.com",
-      role: "admin",
-      avatar: "JD",
-    },
-    {
-      id: 2,
-      name: "Sarah Chen",
-      email: "sarah@company.com",
-      role: "editor",
-      avatar: "SC",
-    },
-    {
-      id: 3,
-      name: "Mike Wilson",
-      email: "mike@company.com",
-      role: "viewer",
-      avatar: "MW",
-    },
-    {
-      id: 4,
-      name: "Emma Davis",
-      email: "emma@company.com",
-      role: "editor",
-      avatar: "ED",
-    },
-    {
-      id: 5,
-      name: "Alex Kim",
-      email: "alex@company.com",
-      role: "viewer",
-      avatar: "AK",
-    },
-  ];
+
 
   const stepsConfig = [
     { number: 1, title: "Basic Info", description: "Process details" },
@@ -176,7 +141,7 @@ export default function EditProcessPage() {
                     order: index + 1,
                     notes: step.notes?.toString() || "",
                     status: status,
-                    assignee: step.assignee?.toString() || "",
+                    assignee: typeof step.assignee === 'object' ? (step.assignee?._id || "") : (step.assignee || ""),
                   };
                 })
               : [],
@@ -637,20 +602,56 @@ export default function EditProcessPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Assign To
                       </label>
-                      <select
-                        value={step.assignee}
-                        onChange={(e) =>
-                          handleStepChange(step.id, "assignee", e.target.value)
-                        }
-                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500 shadow-sm bg-white"
-                      >
-                        <option value="">Select team member</option>
-                        {workspaceUsers.map((member) => (
-                          <option key={member._id} value={member._id}>
-                            {member.name} ({member.role})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative group">
+                        <div className="flex items-center gap-2 w-full border border-gray-300 rounded-lg py-1 px-3 focus-within:ring-2 focus-within:ring-amber-500 shadow-sm bg-white transition-all">
+                          {/* Member Icon/Avatar wrapper */}
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-xs border border-amber-200 shadow-sm">
+                            {(() => {
+                              const currentId = typeof step.assignee === 'object' ? step.assignee._id : step.assignee;
+                              const member = workspaceUsers.find(u => u._id === currentId);
+                              return member ? member.name?.charAt(0).toUpperCase() : <FiUsers className="w-4 h-4" />;
+                            })()}
+                          </div>
+                          
+                          <select
+                            value={typeof step.assignee === 'object' ? step.assignee._id : step.assignee}
+                            onChange={(e) =>
+                              handleStepChange(step.id, "assignee", e.target.value)
+                            }
+                            className="flex-1 bg-transparent border-none focus:ring-0 py-2 text-sm font-medium text-gray-900 appearance-none outline-none cursor-pointer"
+                          >
+                            <option value="">No one assigned</option>
+                            {workspaceUsers.map((member) => (
+                              <option key={member._id} value={member._id}>
+                                {member.name} ({member.role})
+                              </option>
+                            ))}
+                          </select>
+                          
+                          {/* Custom Dropdown Arrow */}
+                          <div className="pointer-events-none pr-1">
+                            <FiChevronDown className="h-4 w-4 text-gray-400 group-hover:text-amber-500 transition-colors" />
+                          </div>
+                        </div>
+                        
+                        {/* Selected Role Badge (subtle) */}
+                        {(() => {
+                          const currentId = typeof step.assignee === 'object' ? step.assignee._id : step.assignee;
+                          const member = workspaceUsers.find(u => u._id === currentId);
+                          if (member) {
+                            return (
+                              <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden sm:block pointer-events-none">
+                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                                  member.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {member.role}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">

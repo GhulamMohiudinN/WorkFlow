@@ -111,19 +111,19 @@ export default function DashboardLayout({ children }) {
     },
     {
       name: "Company",
-      href: "company",
+      href: "/company",
       icon: FaBuilding,
       current: pathname.includes("/company"),
     },
     {
       name: "Processes",
-      href: "processes",
+      href: "/processes",
       icon: FiLayers,
       current: pathname.includes("/processes"),
     },
     {
       name: "Users",
-      href: "users",
+      href: "/users",
       icon: FiUsers,
       current: pathname.includes("/users"),
     },

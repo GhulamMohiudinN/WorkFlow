@@ -168,6 +168,18 @@ acceptInvitation: async (data) => {
   return response.data;
 },
 
+  // Change password for logged-in user
+  changePassword: async (oldPassword, newPassword) => {
+    const response = await api.post("/users/change-password", {
+      oldPassword,
+      newPassword,
+      confirmPassword: newPassword,
+    });
+    return response.data;
+  },
 };
+
+
+
 
 export default authAPI;

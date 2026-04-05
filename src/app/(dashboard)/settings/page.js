@@ -16,10 +16,304 @@ import {
   FiDownload,
   FiAlertCircle,
   FiCheckCircle,
+  FiTrash2,
+  FiX,
+  FiEyeOff,
+} from "react-icons/fi";
+import { FiCpu } from "react-icons/fi";
+import toast, { Toaster } from "react-hot-toast";
+import { authAPI } from "../../api/auth";
+import workspaceAPI from "../../api/workspaceAPI";
+import { useRouter } from "next/navigation";
+
+// SENIOR LEVEL REFACTORED SETTINGS PAGE
+export default function SettingsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  
+  // Password State
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Delete Workspace State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const workspaceJson = typeof window !== "undefined" ? localStorage.getItem("workspace") : null;
+  const workspace = workspaceJson ? JSON.parse(workspaceJson) : { companyName: "Workspace" };
+  const workspaceName = workspace.companyName || "Your Workspace";
+
+  // Password Handlers
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const submitChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await authAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      toast.success("Password updated successfully");
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to change password");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  // Delete Handlers
+  const handleDeleteWorkspace = async () => {
+    if (confirmName !== workspaceName) {
+      toast.error("Workspace name does not match");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await workspaceAPI.deleteWorkspace();
+      toast.success("Workspace deleted successfully");
+      localStorage.clear();
+      router.push("/login");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete workspace");
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto py-10 px-4">
+      <Toaster position="top-right" />
+      
+      {/* Header */}
+      <div className="mb-10">
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Security & Workspace</h1>
+        <p className="text-gray-500 mt-2 text-lg">Manage your account protection and workspace lifecycle.</p>
+      </div>
+
+      <div className="space-y-8">
+        
+        {/* SECTION 1: CHANGE PASSWORD */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          <div className="px-8 py-6 border-b border-gray-50 flex items-center gap-3">
+            <div className="p-2 bg-amber-50 rounded-lg">
+              <FiShield className="h-6 w-6 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">Password & Security</h2>
+              <p className="text-sm text-gray-500">Update your credentials to keep your account safe</p>
+            </div>
+          </div>
+          
+          <form onSubmit={submitChangePassword} className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPass ? "text" : "password"}
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all"
+                    placeholder="••••••••"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-600 transition-colors"
+                  >
+                    {showCurrentPass ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all"
+                    placeholder="Min. 6 characters"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-600 transition-colors"
+                  >
+                    {showNewPass ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPass ? "text" : "password"}
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all"
+                    placeholder="••••••••"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-600 transition-colors"
+                  >
+                    {showConfirmPass ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-50 flex justify-end">
+              <button
+                type="submit"
+                disabled={changingPassword}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl hover:from-amber-600 hover:to-amber-700 font-bold transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              >
+                {changingPassword ? (
+                  <><FiCpu className="animate-spin mr-2 h-5 w-5" /> Updating...</>
+                ) : (
+                  <><FiSave className="mr-2 h-5 w-5" /> Update Password</>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* SECTION 2: DANGER ZONE */}
+        <div className="bg-red-50/30 rounded-2xl border border-red-100 shadow-sm overflow-hidden transition-all hover:bg-red-50/50">
+          <div className="px-8 py-6 border-b border-red-100 flex items-center gap-3 bg-red-50/50">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <FiAlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-red-900">Danger Zone</h2>
+              <p className="text-sm text-red-700/70">Irreversible actions that affect your entire workspace</p>
+            </div>
+          </div>
+          
+          <div className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg">Delete this workspace</h3>
+              <p className="text-sm text-gray-600 max-w-md mt-1 leading-relaxed">
+                Once you delete a workspace, there is no going back. Please be certain. All data, users, and processes will be permanently removed.
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowDeleteModal(true)}
+              className="px-6 py-3 border-2 border-red-500 text-red-600 font-bold rounded-xl hover:bg-red-500 hover:text-white transition-all duration-200"
+            >
+              Delete Workspace
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-red-600 p-6 flex flex-col items-center text-center text-white">
+              <div className="bg-white/20 p-4 rounded-full mb-4">
+                <FiTrash2 className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-black">Hold On!</h3>
+              <p className="text-red-100 text-sm mt-2">This action is extremely dangerous.</p>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <p className="text-gray-600 text-center text-sm">
+                To confirm deletion, please type the workspace name: <br/>
+                <span className="font-black text-gray-900 mt-1 block tracking-wider uppercase">"{workspaceName}"</span>
+              </p>
+              
+              <input
+                type="text"
+                value={confirmName}
+                onChange={(e) => setConfirmName(e.target.value)}
+                placeholder="Type workspace name"
+                className="w-full border-2 border-red-100 rounded-xl py-3 px-4 focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none transition-all text-center font-bold uppercase tracking-widest text-sm"
+              />
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  disabled={confirmName !== workspaceName || isDeleting}
+                  onClick={handleDeleteWorkspace}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black tracking-widest transition-all shadow-lg shadow-red-600/30 disabled:opacity-30 disabled:shadow-none"
+                >
+                  {isDeleting ? "DELETING..." : "CONFIRM DELETION"}
+                </button>
+                <button
+                  disabled={isDeleting}
+                  onClick={() => setShowDeleteModal(false)}
+                  className="w-full py-3 text-gray-500 font-bold hover:text-gray-800 transition-colors"
+                >
+                  No, Keep it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORIGINAL CODE PRESERVED BELOW (COMMENTED)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/*
+import { useState, useEffect } from "react";
+import {
+  FiSettings,
+  FiSave,
+  FiBell,
+  FiShield,
+  FiGlobe,
+  FiDatabase,
+  FiUsers,
+  FiLock,
+  FiZap,
+  FiEye,
+  FiMail,
+  FiClock,
+  FiDownload,
+  FiAlertCircle,
+  FiCheckCircle,
 } from "react-icons/fi";
 import { FiCpu } from "react-icons/fi";
 
-export default function SettingsPage() {
+export function OriginalSettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -244,7 +538,6 @@ export default function SettingsPage() {
 
   return (
     <div className="py-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
@@ -276,7 +569,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
-        {/* Tab Navigation */}
         <div className="border-b border-amber-100">
           <div className="flex overflow-x-auto">
             {tabs.map((tab) => (
@@ -296,9 +588,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Tab Content */}
         <div className="p-6">
-          {/* General Settings */}
           {activeTab === "general" && (
             <div className="space-y-8">
               <div>
@@ -398,7 +688,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Security Settings */}
           {activeTab === "security" && (
             <div className="space-y-8">
               <div>
@@ -541,7 +830,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Notification Settings */}
           {activeTab === "notifications" && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -666,7 +954,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Integration Settings */}
           {activeTab === "integrations" && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -785,7 +1072,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Data & Privacy */}
           {activeTab === "data" && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -863,7 +1149,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* API Settings */}
           {activeTab === "api" && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -900,7 +1185,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Danger Zone */}
       <div className="mt-8 bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-red-200 bg-red-50">
           <h2 className="text-lg font-semibold text-red-900">Danger Zone</h2>
@@ -937,3 +1221,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+*/
