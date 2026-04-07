@@ -47,7 +47,7 @@ export default function LoginPage() {
       const role = data.user?.userType || data.role || localStorage.getItem("role");
 
       if (role === "member") {
-        router.push("/dashboardUsers");
+        router.push("/users/dashboardUsers");
       } else {
         router.push("/dashboard");
       }

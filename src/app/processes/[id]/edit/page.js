@@ -5,6 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { processAPI } from "../../../api/processAPI";
 import { userAPI } from "../../../api/userAPI";
+import toast from "react-hot-toast";
+
+
 import {
   FiLayers,
   FiPlus,
@@ -116,16 +119,29 @@ export default function EditProcessPage() {
           const process = result.data;
           console.log("[Edit] Process data received:", process);
 
+          // Collect all unique assignee IDs from steps to ensure they are included in assignments
+          const stepAssigneeIds = Array.isArray(process.steps)
+            ? process.steps
+                .map(step => typeof step.assignee === 'object' ? step.assignee?._id : (step.assignee || ""))
+                .filter(id => !!id)
+            : [];
+
+          // Collect process-level assignees (handle both 'assignedTo' and 'assignees' field names)
+          // We use a Set to ensure unique IDs across both sources
+          const processAssigneeIds = Array.isArray(process.assignedTo || process.assignees)
+            ? (process.assignedTo || process.assignees).map((a) =>
+                typeof a === "string" ? a : a._id,
+              )
+            : [];
+
+          const combinedAssignees = [...new Set([...processAssigneeIds, ...stepAssigneeIds])];
+
           const newFormData = {
             name: process.name?.toString() || "",
             description: process.description?.toString() || "",
             category: process.category?.toString() || "",
             visibility: process.visibility?.toString() || "private",
-            assignedTo: Array.isArray(process.assignedTo)
-              ? process.assignedTo.map((a) =>
-                  typeof a === "string" ? a : a._id,
-                )
-              : [],
+            assignedTo: combinedAssignees,
             steps: Array.isArray(process.steps)
               ? process.steps.map((step, index) => {
                   let status = step.status?.toString() || "draft";
@@ -184,12 +200,25 @@ export default function EditProcessPage() {
   };
 
   const handleStepChange = (stepId, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      steps: prev.steps.map((step) =>
+    setFormData((prev) => {
+      const updatedSteps = prev.steps.map((step) =>
         step.id === stepId ? { ...step, [field]: value } : step,
-      ),
-    }));
+      );
+
+      // Senior-level approach: If an assignee is picked for a step,
+      // they should automatically be included in process-level assignments
+      // to ensure they have the necessary visibility.
+      let updatedAssignedTo = [...prev.assignedTo];
+      if (field === "assignee" && value && !updatedAssignedTo.includes(value)) {
+        updatedAssignedTo.push(value);
+      }
+
+      return {
+        ...prev,
+        steps: updatedSteps,
+        assignedTo: updatedAssignedTo,
+      };
+    });
   };
 
   const addNewStep = () => {
@@ -296,6 +325,7 @@ export default function EditProcessPage() {
         setSuccessMessage(result.message);
         setSuccess(true);
         console.log("Process updated successfully:", result.data);
+        toast.success("Process updated successfully");
 
         setTimeout(() => {
           router.push("/processes");
@@ -303,6 +333,7 @@ export default function EditProcessPage() {
       } else {
         setError(result.error || "Failed to update process. Please try again.");
         console.error("Error updating process:", result.error);
+        toast.error("Failed to update process");
       }
     } catch (err) {
       const errorMessage =
@@ -326,6 +357,7 @@ export default function EditProcessPage() {
         setSuccessMessage("Process deleted successfully");
         setSuccess(true);
         console.log("Process deleted successfully");
+        toast.success("Process deleted successfully");
 
         setTimeout(() => {
           router.push("/processes");
@@ -333,6 +365,7 @@ export default function EditProcessPage() {
       } else {
         setError(result.error || "Failed to delete process. Please try again.");
         console.error("Error deleting process:", result.error);
+        toast.error("Failed to delete process");
         setShowDeleteModal(false);
       }
     } catch (err) {

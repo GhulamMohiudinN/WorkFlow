@@ -52,12 +52,12 @@ export default function UserLayout({ children }) {
   }
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboardUsers", icon: FiHome },
-    { name: "Processes", href: "/processesUsers", icon: FiLayers },
-    { name: "My Profile", href: "/profile", icon: FiUser },
+    { name: "Dashboard", href: "/users/dashboardUsers", icon: FiHome },
+    { name: "Processes", href: "/users/processesUsers", icon: FiLayers },
+    { name: "My Profile", href: "/users/profile", icon: FiUser },
   ];
 
-  const isActive = (href) => pathname === href;
+  const isActive = (href) => pathname === href || pathname.startsWith(href + "/");
 
   return (
     <div className="min-h-screen bg-gray-50">
