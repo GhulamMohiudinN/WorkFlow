@@ -315,17 +315,19 @@ export const processAPI = {
 
   /**
    * Get assigned processes for current user
-   * @param {Object} filters - Optional filters (search, status)
+   * @param {Object} filters - Optional filters (userId, search, status, etc.)
    * @returns {Promise}
    */
   getAssignedProcesses: async (filters = {}) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.search) params.append("search", filters.search);
-      if (filters.status) params.append("status", filters.status);
+      // Senior-level approach: dynamically clean and build query params
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value != null && value !== "")
+      );
+      const queryString = new URLSearchParams(cleanFilters).toString();
 
       const response = await api.get(
-        `/process/assigned/me${params.toString() ? "?" + params.toString() : ""}`,
+        `/process/assigned/me${queryString ? "?" + queryString : ""}`
       );
 
       return {
