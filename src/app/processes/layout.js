@@ -253,21 +253,88 @@ export default function ProcessesLayout({ children }) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 lg:hidden">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-                <FiBriefcase className="h-5 w-5 text-white" />
+        {/* Top navigation */}
+        <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-amber-100">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <FiMenu className="h-6 w-6" />
+                </button>
+                <div className="hidden lg:block ml-4">
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    {workspace?.companyName || "Company Workspace"}
+                  </h1>
+                  <p className="text-sm text-gray-500">Welcome, {user?.name}</p>
+                </div>
+                {/* Mobile text version */}
+                <div className="lg:hidden ml-4">
+                  <h1 className="text-lg font-semibold text-gray-900">
+                    WorkFlow
+                  </h1>
+                </div>
               </div>
-              <span className="font-bold text-gray-900">WorkFlow</span>
+              <div className="flex items-center space-x-4">
+                <button className="cursor-not-allowed p-2 text-gray-400 hover:text-gray-500 relative">
+                  <FiBell className="h-6 w-6" />
+                  <span className="absolute top-1 right-1 h-2 w-2 bg-amber-500 rounded-full"></span>
+                </button>
+
+                {/* User menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="shrink-0">
+                      <div className="h-8 w-8 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {workspace?.adminId?.name?.charAt(0).toUpperCase() || "?"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-gray-900">
+                        {user?.email}
+                      </p>
+                      <p className="text-xs text-gray-500">{role}</p>
+                    </div>
+                    <FiChevronDown className="h-5 w-5 text-gray-400" />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <a
+                        href="#"
+                        className="cursor-not-allowed flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <FiUser className="mr-3 h-4 w-4" />
+                        Your Profile
+                      </a>
+                      <a
+                        href="/dashboard/settings"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <FiSettings className="mr-3 h-4 w-4" />
+                        Settings
+                      </a>
+                      <div className="border-t border-gray-100"></div>
+                      <p
+                        onClick={signout}
+                        className="cursor-pointer flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <FiLogOut className="mr-3 h-4 w-4" />
+                        Sign out
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-            >
-              <FiMenu className="h-6 w-6" />
-            </button>
           </div>
         </div>
 

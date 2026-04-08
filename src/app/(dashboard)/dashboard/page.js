@@ -5,6 +5,7 @@ import { socket } from "../../utils/socket";
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import workspaceAPI from "../../api/workspaceAPI";
+import { userAPI } from "../../api/userAPI";
 import {
   FiUsers,
   FiLayers,
@@ -76,6 +77,7 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [recentMembers, setRecentMembers] = useState([]);
 
   useEffect(() => {
     const initDashboard = async () => {
@@ -97,6 +99,23 @@ export default function DashboardPage() {
           setOverview(overviewData);
         } else {
           throw new Error("Failed to fetch overview data");
+        }
+
+        // Fetch Recent Non-Admin Members (Senior level dynamic retrieval)
+        try {
+          const usersData = await userAPI.getWorkspaceUsers({ limit: 10 });
+          const allUsers = usersData?.users || usersData?.members || usersData?.data || [];
+          
+          let parsedUser = {};
+          if (storedUser) parsedUser = JSON.parse(storedUser);
+          
+          const filteredMembers = allUsers
+            .filter(u => u.role !== "admin" && u.role !== "superadmin" && u._id !== parsedUser._id)
+            .slice(0, 2);
+            
+          setRecentMembers(filteredMembers);
+        } catch (err) {
+          console.error("Failed to load workspace members for side panel", err);
         }
       } catch (err) {
         console.error("Dashboard Initialization Error:", err);
@@ -352,27 +371,24 @@ export default function DashboardPage() {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {workspace?.members?.length > 0 ? (
-                  workspace.members.slice(0, 5).map((memberDetail) => {
-                    const isSelf = memberDetail?.memberId?._id === user?._id;
+                {recentMembers.length > 0 ? (
+                  recentMembers.map((member) => {
                     return (
                       <div
-                        key={memberDetail?.memberId?._id}
-                        className={`flex items-center justify-between p-2 rounded-xl transition-all duration-200 ${
-                          isSelf ? "bg-amber-50/50 ring-1 ring-amber-100" : "hover:bg-gray-50"
-                        }`}
+                        key={member._id || member.id}
+                        className="flex items-center justify-between p-2 rounded-xl transition-all duration-200 hover:bg-gray-50 group"
                       >
                         <div className="flex items-center space-x-3">
                           <div className="shrink-0 relative">
-                            {memberDetail?.memberId?.profilePicture ? (
+                            {member.profilePicture ? (
                               <img 
-                                src={memberDetail.memberId.profilePicture} 
-                                alt={memberDetail.memberId.name}
+                                src={member.profilePicture} 
+                                alt={member.name}
                                 className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
                               />
                             ) : (
-                              <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                {memberDetail?.memberId?.name?.charAt(0).toUpperCase()}
+                              <div className="h-10 w-10 rounded-full bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:shadow-md transition-shadow">
+                                {member.name?.charAt(0).toUpperCase()}
                               </div>
                             )}
                             <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
@@ -380,15 +396,14 @@ export default function DashboardPage() {
 
                           <div className="overflow-hidden">
                             <p className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">
-                              {memberDetail.memberId?.name}
-                              {isSelf && <span className="ml-1 text-[10px] text-amber-700 font-bold uppercase tracking-wider">(You)</span>}
+                              {member.name}
                             </p>
                             <span
                               className={`text-[10px] uppercase font-bold tracking-tight px-2 py-0.5 rounded-md inline-block mt-0.5 ${getRoleColor(
-                                memberDetail.role,
+                                member.role,
                               )}`}
                             >
-                              {memberDetail.role}
+                              {member.role}
                             </span>
                           </div>
                         </div>

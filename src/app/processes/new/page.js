@@ -511,7 +511,13 @@ export default function NewProcessPage() {
                       className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500 bg-white"
                     >
                       <option value="">Select team member</option>
-                      {workspaceUsers.map((member) => (
+                      {workspaceUsers
+                        .filter(
+                          (member) =>
+                            (member.role !== "admin" && member.role !== "superadmin") ||
+                            member._id === (typeof step.assignee === "object" ? step.assignee._id : step.assignee)
+                        )
+                        .map((member) => (
                         <option key={member._id} value={member._id}>
                           {member.name} ({member.role})
                         </option>
@@ -566,7 +572,14 @@ export default function NewProcessPage() {
                     <p className="text-sm text-gray-500">No team members found</p>
                   </div>
                 ) : (
-                  workspaceUsers.map((member) => (
+                  workspaceUsers
+                    .filter(
+                      (member) =>
+                        (member.role !== "admin" && member.role !== "superadmin") ||
+                        formData.assignedTo.includes(member._id) ||
+                        (member.email && formData.assignedTo.includes(member.email))
+                    )
+                    .map((member) => (
                     <div
                       key={member._id}
                       className={`border rounded-xl p-4 cursor-pointer transition-all flex items-center gap-3 ${

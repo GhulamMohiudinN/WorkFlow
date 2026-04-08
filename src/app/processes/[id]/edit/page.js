@@ -654,7 +654,13 @@ export default function EditProcessPage() {
                             className="flex-1 bg-transparent border-none focus:ring-0 py-2 text-sm font-medium text-gray-900 appearance-none outline-none cursor-pointer"
                           >
                             <option value="">No one assigned</option>
-                            {workspaceUsers.map((member) => (
+                            {workspaceUsers
+                              .filter(
+                                (member) =>
+                                  (member.role !== "admin" && member.role !== "superadmin") ||
+                                  member._id === (typeof step.assignee === "object" ? step.assignee._id : step.assignee)
+                              )
+                              .map((member) => (
                               <option key={member._id} value={member._id}>
                                 {member.name} ({member.role})
                               </option>
@@ -747,7 +753,14 @@ export default function EditProcessPage() {
                     <p className="text-sm text-gray-500">No team members found</p>
                   </div>
                 ) : (
-                  workspaceUsers.map((member) => (
+                  workspaceUsers
+                    .filter(
+                      (member) =>
+                        (member.role !== "admin" && member.role !== "superadmin") ||
+                        formData.assignedTo.includes(member._id) ||
+                        formData.assignedTo.includes(member.email)
+                    )
+                    .map((member) => (
                     <div
                       key={member._id}
                       className={`border rounded-xl p-4 cursor-pointer transition-all flex items-center gap-3 ${

@@ -335,32 +335,10 @@ export default function ProcessesPage() {
               >
                 <FiList className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => setViewMode("map")}
-                className={`p-2 rounded-md ${viewMode === "map" ? "bg-amber-100 text-amber-600" : "text-gray-400"}`}
-              >
-                <FiMap className="h-4 w-4" />
-              </button>
+             
             </div>
 
-            {viewMode === "map" && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setShowTimeframe(!showTimeframe)}
-                  className={`px-3 py-2 rounded-lg text-sm flex items-center space-x-1 ${showTimeframe ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-600"}`}
-                >
-                  <FiClock className="h-4 w-4" />
-                  <span>Timeframe</span>
-                </button>
-                <button
-                  onClick={() => setShowTags(!showTags)}
-                  className={`px-3 py-2 rounded-lg text-sm flex items-center space-x-1 ${showTags ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-600"}`}
-                >
-                  <FiTag className="h-4 w-4" />
-                  <span>Tags</span>
-                </button>
-              </div>
-            )}
+          
           </div>
         </div>
       </div>
@@ -578,144 +556,7 @@ export default function ProcessesPage() {
         </div>
       )}
 
-      {/* Map View */}
-      {viewMode === "map" && (
-        <div className="space-y-8">
-          {filteredProcesses.map((process) => (
-            <div
-              key={process.id}
-              className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden"
-            >
-              <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div
-                    className={`${process.color} h-10 w-10 rounded-lg flex items-center justify-center mr-3`}
-                  >
-                    <FiLayers className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {process.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">Process Map View</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-amber-600">
-                    <FiDownload className="h-5 w-5" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-amber-600">
-                    <FiCopy className="h-5 w-5" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-amber-600">
-                    <FiSettings className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="relative overflow-x-auto">
-                  <div className="min-w-[800px]">
-                    <div className="grid grid-cols-4 gap-4 mb-6">
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
-                        HR Team
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
-                        IT Team
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
-                        Management
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-3 text-center font-medium text-gray-700 text-sm">
-                        Automated
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {(process.activities || []).map((activity, idx) => (
-                        <div key={activity?.id || `activity-${idx}`}>
-                          <div className="grid grid-cols-4 gap-4">
-                            <div
-                              className={`${
-                                activity.assignee.includes("HR")
-                                  ? "col-span-1"
-                                  : activity.assignee.includes("IT")
-                                    ? "col-start-2"
-                                    : activity.assignee.includes("Manager") ||
-                                        activity.assignee.includes("Lead")
-                                      ? "col-start-3"
-                                      : activity.automation
-                                        ? "col-start-4"
-                                        : "col-span-1"
-                              }`}
-                            >
-                              <div
-                                className={`rounded-lg border-2 p-4 cursor-pointer hover:shadow-lg transition-all ${
-                                  activity.type === "decision"
-                                    ? "border-amber-400 bg-amber-50"
-                                    : activity.type === "parallel"
-                                      ? "border-green-400 bg-green-50"
-                                      : "border-gray-200 bg-white"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-gray-900">
-                                    {activity.name}
-                                  </h4>
-                                  {activity.type === "decision" && (
-                                    <FiAlertCircle className="h-5 w-5 text-amber-500" />
-                                  )}
-                                  {activity.type === "parallel" && (
-                                    <FiZap className="h-5 w-5 text-green-500" />
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600 mb-2">
-                                  Assigned to: {activity.assignee}
-                                </p>
-                                <div className="flex items-center justify-between text-xs text-gray-500">
-                                  <span className="flex items-center">
-                                    <FiClock className="h-3 w-3 mr-1" />
-                                    {activity.timeEstimate}
-                                  </span>
-                                  {showTimeframe && (
-                                    <span className="flex items-center">
-                                      <FiDollarSign className="h-3 w-3 mr-1" />$
-                                      {activity.cost}
-                                    </span>
-                                  )}
-                                  {showTags && (
-                                    <span className="flex items-center">
-                                      <FiTag className="h-3 w-3 mr-1" />
-                                      {activity.tags[0]}
-                                    </span>
-                                  )}
-                                </div>
-                                {activity.automation && (
-                                  <div className="mt-2 pt-2 border-t border-gray-100">
-                                    <span className="text-xs text-blue-600 flex items-center">
-                                      <FiZap className="h-3 w-3 mr-1" />
-                                      AI Automated
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {idx < process.activities.length - 1 && (
-                            <div className="flex justify-center my-2">
-                              <div className="w-0.5 h-6 bg-gray-300"></div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+     
 
       {filteredProcesses.length === 0 && !isLoading && (
         <div className="text-center py-12">
