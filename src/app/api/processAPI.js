@@ -140,13 +140,17 @@ export const processAPI = {
       let response;
 
       try {
-        response = await api.patch(`/process/update/${processId}`, payload, { timeout: 30000 });
+        response = await api.patch(`/process/update/${processId}`, payload, {
+          timeout: 30000,
+        });
       } catch (firstError) {
         if (
           firstError.response?.status === 404 ||
           firstError.response?.status === 400
         ) {
-          response = await api.put(`/process/${processId}`, payload, { timeout: 30000 });
+          response = await api.put(`/process/${processId}`, payload, {
+            timeout: 30000,
+          });
         } else {
           throw firstError;
         }
@@ -322,12 +326,14 @@ export const processAPI = {
     try {
       // Senior-level approach: dynamically clean and build query params
       const cleanFilters = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value != null && value !== "")
+        Object.entries(filters).filter(
+          ([_, value]) => value != null && value !== "",
+        ),
       );
       const queryString = new URLSearchParams(cleanFilters).toString();
 
       const response = await api.get(
-        `/process/assigned/me${queryString ? "?" + queryString : ""}`
+        `/process/assigned/me${queryString ? "?" + queryString : ""}`,
       );
 
       return {
@@ -397,6 +403,35 @@ export const processAPI = {
       };
     }
   },
+
+  /**
+   * Mark a step as completed
+   * @param {string} stepId - Step ID
+   * @returns {Promise}
+   */
+  completeStep: async (stepId) => {
+    try {
+      if (!stepId) {
+        return { success: false, error: "Step ID is required", status: 400 };
+      }
+
+      const response = await api.patch(`/step/complete/${stepId}`);
+      return {
+        success: true,
+        data: response.data,
+        message: "Step completed successfully",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to complete step",
+        status: error.response?.status,
+      };
+    }
+  },
 };
 
 /**
@@ -423,11 +458,12 @@ function transformFormDataToAPI(formData) {
         escalateOverdueTasks: formData.automation?.escalation ?? false,
       },
     },
-    assignedTo: (formData.assignedTo || []).map(a => 
-      typeof a === "string" ? a : a._id || a.id
+    assignedTo: (formData.assignedTo || []).map((a) =>
+      typeof a === "string" ? a : a._id || a.id,
     ),
     steps: (formData.steps || []).map((step) => ({
-      _id: step._id || (step.id?.toString().startsWith('step-') ? null : step.id),
+      _id:
+        step._id || (step.id?.toString().startsWith("step-") ? null : step.id),
       title: step.title,
       description: step.description,
       timeEstimate: step.timeEstimate,
