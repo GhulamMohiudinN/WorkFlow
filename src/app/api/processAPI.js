@@ -1,6 +1,7 @@
 import api from "./axios";
 
 export const processAPI = {
+
   createProcess: async (processData) => {
     try {
       const payload = transformFormDataToAPI(processData);
@@ -22,22 +23,30 @@ export const processAPI = {
     }
   },
 
+ 
   getProcesses: async (filters = {}) => {
     try {
       const params = new URLSearchParams();
-
       if (filters.search) params.append("search", filters.search);
       if (filters.status) params.append("status", filters.status);
       if (filters.category) params.append("category", filters.category);
-      if (filters.visibility) params.append("visibility", filters.visibility);
+      if (filters.page) params.append("page", filters.page);
+      if (filters.limit) params.append("limit", filters.limit);
+
+      params.append("_t", Date.now());
 
       const response = await api.get(
-        `/process/list${params.toString() ? "?" + params.toString() : ""}`,
+        `/process/workspace/list${params.toString() ? "?" + params.toString() : ""}`,
       );
 
       return {
         success: true,
-        data: response.data.processes || response.data,
+        data: response.data.processes || [],
+        analytics: response.data.analytics || null,
+        total: response.data.total ?? 0,
+        page: response.data.page ?? 1,
+        limit: response.data.limit ?? 10,
+        totalPages: response.data.totalPages ?? 0,
         message: "Processes fetched successfully",
       };
     } catch (error) {
@@ -52,6 +61,12 @@ export const processAPI = {
     }
   },
 
+ 
+  getWorkspaceProcesses: async (filters = {}) => {
+    return processAPI.getProcesses(filters);
+  },
+
+ 
   getProcess: async (processId) => {
     try {
       if (!processId) {
@@ -62,52 +77,15 @@ export const processAPI = {
         };
       }
 
-      console.log(`[API] Fetching process with ID: ${processId}`);
+      const response = await api.get(`/process/${processId}`);
 
-      let response;
-      let lastError = null;
-
-      // Try multiple endpoint variations
-      const endpointVariations = [
-        `/process/${processId}`,
-        `/process/get/${processId}`,
-        `/processes/${processId}`,
-        `/processes/get/${processId}`,
-      ];
-
-      for (const endpoint of endpointVariations) {
-        try {
-          console.log(`[API] Trying endpoint: ${endpoint}`);
-          response = await api.get(endpoint);
-          console.log(`[API] Success with endpoint: ${endpoint}`);
-          break;
-        } catch (error) {
-          lastError = error;
-          console.warn(
-            `[API] Endpoint ${endpoint} failed:`,
-            error.response?.status,
-            error.response?.data?.message || error.message,
-          );
-        }
-      }
-
-      if (!response) {
-        console.error(`[API] All endpoints failed. Last error:`, lastError);
-        throw lastError;
-      }
-
-      console.log(`[API] Raw response:`, response.data);
-
-      // Extract process data - handle both direct response and nested response
       const processData =
         response.data?.process || response.data?.data || response.data;
 
-      console.log(`[API] Extracted process data:`, processData);
-
-      if (!processData || !processData._id) {
+      if (!processData || !(processData._id || processData.id)) {
         return {
           success: false,
-          error: "Invalid process data structure returned from server",
+          error: "Invalid process data returned from server",
           status: 500,
         };
       }
@@ -118,7 +96,6 @@ export const processAPI = {
         message: "Process fetched successfully",
       };
     } catch (error) {
-      console.error(`[API] Error fetching process:`, error);
       return {
         success: false,
         error:
@@ -130,6 +107,7 @@ export const processAPI = {
     }
   },
 
+ 
   updateProcess: async (processId, updatedData) => {
     try {
       if (!processId) {
@@ -137,24 +115,7 @@ export const processAPI = {
       }
 
       const payload = transformFormDataToAPI(updatedData);
-      let response;
-
-      try {
-        response = await api.patch(`/process/update/${processId}`, payload, {
-          timeout: 30000,
-        });
-      } catch (firstError) {
-        if (
-          firstError.response?.status === 404 ||
-          firstError.response?.status === 400
-        ) {
-          response = await api.put(`/process/${processId}`, payload, {
-            timeout: 30000,
-          });
-        } else {
-          throw firstError;
-        }
-      }
+      const response = await api.patch(`/process/update/${processId}`, payload);
 
       return {
         success: true,
@@ -173,25 +134,14 @@ export const processAPI = {
     }
   },
 
+  
   deleteProcess: async (processId) => {
     try {
       if (!processId) {
         return { success: false, error: "Process ID is required", status: 400 };
       }
 
-      let response;
-      try {
-        response = await api.delete(`/process/delete/${processId}`);
-      } catch (firstError) {
-        if (
-          firstError.response?.status === 404 ||
-          firstError.response?.status === 400
-        ) {
-          response = await api.delete(`/process/${processId}`);
-        } else {
-          throw firstError;
-        }
-      }
+      const response = await api.delete(`/process/delete/${processId}`);
 
       return {
         success: true,
@@ -210,11 +160,6 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Duplicate a process
-   * @param {string} processId - Process ID to duplicate
-   * @returns {Promise}
-   */
   duplicateProcess: async (processId) => {
     try {
       const response = await api.post(`/process/${processId}/duplicate`);
@@ -235,11 +180,7 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Publish a process (change from draft to active)
-   * @param {string} processId - Process ID
-   * @returns {Promise}
-   */
+ 
   publishProcess: async (processId) => {
     try {
       const response = await api.post(`/process/${processId}/publish`);
@@ -260,11 +201,7 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Archive a process
-   * @param {string} processId - Process ID
-   * @returns {Promise}
-   */
+  
   archiveProcess: async (processId) => {
     try {
       const response = await api.post(`/process/${processId}/archive`);
@@ -285,49 +222,12 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Get all processes for workspace
-   * @param {Object} filters - Optional filters (search, status)
-   * @returns {Promise}
-   */
-  getWorkspaceProcesses: async (filters = {}) => {
-    try {
-      const params = new URLSearchParams();
-      if (filters.search) params.append("search", filters.search);
-      if (filters.status) params.append("status", filters.status);
 
-      const response = await api.get(
-        `/process/workspace/list${params.toString() ? "?" + params.toString() : ""}`,
-      );
-
-      return {
-        success: true,
-        data: response.data.processes || response.data,
-        message: "Workspace processes fetched successfully",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch workspace processes",
-        status: error.response?.status,
-      };
-    }
-  },
-
-  /**
-   * Get assigned processes for current user
-   * @param {Object} filters - Optional filters (userId, search, status, etc.)
-   * @returns {Promise}
-   */
   getAssignedProcesses: async (filters = {}) => {
     try {
-      // Senior-level approach: dynamically clean and build query params
       const cleanFilters = Object.fromEntries(
         Object.entries(filters).filter(
-          ([_, value]) => value != null && value !== "",
+          ([, value]) => value != null && value !== "",
         ),
       );
       const queryString = new URLSearchParams(cleanFilters).toString();
@@ -338,7 +238,8 @@ export const processAPI = {
 
       return {
         success: true,
-        data: response.data.processes || response.data,
+        data: response.data.processes || [],
+        count: response.data.count ?? 0,
         message: "Assigned processes fetched successfully",
       };
     } catch (error) {
@@ -353,11 +254,35 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Delete a step from a process
-   * @param {string} stepId - Step ID
-   * @returns {Promise}
-   */
+ 
+  updateStepSequence: async (stepId, sequenceNo) => {
+    try {
+      if (!stepId) {
+        return { success: false, error: "Step ID is required", status: 400 };
+      }
+
+      const response = await api.patch(`/step/update/${stepId}`, {
+        sequenceNo,
+      });
+
+      return {
+        success: true,
+        data: response.data,
+        message: "Step sequence updated successfully",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update step sequence",
+        status: error.response?.status,
+      };
+    }
+  },
+
+ 
   deleteStep: async (stepId) => {
     try {
       const response = await api.delete(`/step/delete/${stepId}`);
@@ -378,12 +303,7 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Update a step
-   * @param {string} stepId - Step ID
-   * @param {Object} stepData - Updated step data
-   * @returns {Promise}
-   */
+ 
   updateStep: async (stepId, stepData) => {
     try {
       const response = await api.patch(`/step/update/${stepId}`, stepData);
@@ -404,11 +324,7 @@ export const processAPI = {
     }
   },
 
-  /**
-   * Mark a step as completed
-   * @param {string} stepId - Step ID
-   * @returns {Promise}
-   */
+  
   completeStep: async (stepId) => {
     try {
       if (!stepId) {
@@ -434,18 +350,14 @@ export const processAPI = {
   },
 };
 
-/**
- * Transform form data to API payload format
- * Maps the form state to the expected API structure
- * @param {Object} formData - Form state data
- * @returns {Object} API payload
- */
+
 function transformFormDataToAPI(formData) {
   return {
     name: formData.name,
     description: formData.description,
     category: formData.category,
     visibility: formData.visibility,
+    status: formData.status,
     settings: {
       notifications: {
         email: formData.notifications?.email ?? true,
@@ -458,43 +370,45 @@ function transformFormDataToAPI(formData) {
         escalateOverdueTasks: formData.automation?.escalation ?? false,
       },
     },
-    assignedTo: (formData.assignedTo || []).map((a) =>
+    assignees: (formData.assignees || formData.assignedTo || []).map((a) =>
       typeof a === "string" ? a : a._id || a.id,
     ),
     steps: (formData.steps || []).map((step) => ({
-      _id:
-        step._id || (step.id?.toString().startsWith("step-") ? null : step.id),
+      ...(step._id && !String(step._id).startsWith("step-")
+        ? { _id: step._id }
+        : step.id && !String(step.id).startsWith("step-")
+          ? { _id: step.id }
+          : {}),
       title: step.title,
       description: step.description,
       timeEstimate: step.timeEstimate,
       notes: step.notes || "",
       status: step.status || "draft",
       order: step.order,
+      sequenceNo: step.sequenceNo || step.order || 0,
       assignee: step.assignee || "",
     })),
   };
 }
 
-/**
- * Transform API response data to form data format
- * Reverses the API payload structure back to form state
- * @param {Object} apiData - API response data
- * @returns {Object} Form state data
- */
+
 export function transformAPIToFormData(apiData) {
   return {
     name: apiData.name,
     description: apiData.description,
     category: apiData.category,
     visibility: apiData.visibility,
-    assignedTo: apiData.assignedTo || [],
+    status: apiData.status,
+    assignees: apiData.assignees || apiData.assignedTo || [],
     steps: (apiData.steps || []).map((step, index) => ({
-      id: step._id || index + 1,
+      id: step._id || `step-${index + 1}`,
+      _id: step._id || null,
       title: step.title,
       description: step.description,
       timeEstimate: step.timeEstimate,
       notes: step.notes,
-      order: index + 1,
+      order: step.sequenceNo ?? index + 1,
+      sequenceNo: step.sequenceNo ?? index + 1,
       status: step.status,
       assignee: step.assignee || "",
     })),

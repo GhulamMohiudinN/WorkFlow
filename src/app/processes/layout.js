@@ -19,6 +19,7 @@ import {
   FiBarChart2,
   FiHelpCircle,
   FiGlobe,
+  FiCopy,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import Link from "next/link";
@@ -86,6 +87,12 @@ export default function ProcessesLayout({ children }) {
         href: "/dashboard/users",
         icon: FiUsers,
         current: pathname.startsWith("/dashboard/users"),
+      },
+      {
+        name: "Templates",
+        href: "/templates",
+        icon: FiCopy,
+        current: pathname.startsWith("/templates"),
       },
       {
         name: "Company",

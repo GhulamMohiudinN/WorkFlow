@@ -19,6 +19,7 @@ import {
   FiBarChart2,
   FiHelpCircle,
   FiGlobe,
+  FiCopy,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import Link from "next/link";
@@ -120,6 +121,12 @@ export default function DashboardLayout({ children }) {
       href: "/processes",
       icon: FiLayers,
       current: pathname.includes("/processes"),
+    },
+    {
+      name: "Templates",
+      href: "/templates",
+      icon: FiCopy,
+      current: pathname.includes("/templates"),
     },
     {
       name: "Users",

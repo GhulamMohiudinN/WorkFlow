@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { processAPI } from "../../api/processAPI";
 import { userAPI } from "../../api/userAPI";
+import { templateAPI } from "../../api/templateAPI";
 import {
   FiLayers,
   FiPlus,
@@ -23,6 +24,7 @@ import {
   FiBell,
   FiSettings,
   FiEye,
+  FiCopy,
 } from "react-icons/fi";
 
 export default function NewProcessPage() {
@@ -31,6 +33,11 @@ export default function NewProcessPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Modal State
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveOptions, setSaveOptions] = useState({ process: true, template: false });
+  const [saveProgress, setSaveProgress] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -108,6 +115,46 @@ export default function NewProcessPage() {
     fetchUsers();
   }, []);
 
+  // ── Template Auto-Fill ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const fillFromTemplate = async () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const templateId = urlParams.get("templateId");
+        
+        if (templateId) {
+          const result = await templateAPI.getTemplate(templateId);
+          if (result.success && result.data) {
+            const t = result.data;
+            setFormData(prev => ({
+              ...prev,
+              name: t.name || "",
+              description: t.description || "",
+              category: t.category || "",
+              notifications: t.settings?.notifications || prev.notifications,
+              automation: t.settings?.automation || prev.automation,
+              steps: (t.steps && t.steps.length > 0) ? t.steps.map((s, i) => ({
+                id: Math.random().toString(36).substr(2, 9),
+                title: s.title || `Step ${i + 1}`,
+                description: s.description || "",
+                timeEstimate: s.timeEstimate || "1d",
+                order: s.sequence || s.order || i + 1,
+                notes: s.notes || "",
+                assignee: ""
+              })) : prev.steps
+            }));
+            
+            // By default, if using a template, select "Process Only" for saving
+            setSaveOptions({ process: true, template: false });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load template:", err);
+      }
+    };
+    fillFromTemplate();
+  }, []);
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -177,7 +224,7 @@ export default function NewProcessPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     if (activeStep !== steps.length) {
@@ -199,25 +246,46 @@ export default function NewProcessPage() {
       return;
     }
 
+    setShowSaveModal(true);
+  };
+
+  const executeSave = async () => {
+    if (!saveOptions.process && !saveOptions.template) {
+      setError("Please select at least one option.");
+      return;
+    }
+
     setIsSubmitting(true);
+    setSaveProgress(true);
     setError(null);
     setSuccessMessage("");
 
     try {
-      const result = await processAPI.createProcess(formData);
+      const promises = [];
+      if (saveOptions.process) {
+        promises.push(processAPI.createProcess(formData));
+      }
+      if (saveOptions.template) {
+        promises.push(templateAPI.createTemplate(formData));
+      }
 
-      if (result.success) {
-        setSuccessMessage(result.message);
-        setSuccess(true);
-        console.log("Process created successfully:", result.data);
+      const results = await Promise.all(promises);
+      const errors = results.filter((r) => !r.success);
 
-        // Optional: Redirect to processes list after delay
-        setTimeout(() => {
-          router.push("/processes");
-        }, 2000);
+      if (errors.length > 0) {
+        setError(errors[0].error || "Failed to save selected options.");
+        console.error("Errors during save:", errors);
       } else {
-        setError(result.error || "Failed to create process. Please try again.");
-        console.error("Error creating process:", result.error);
+        setSuccessMessage("Successfully saved!");
+        setSuccess(true);
+        setShowSaveModal(false);
+
+        // Redirect after delay based on selection
+        setTimeout(() => {
+          if (saveOptions.process && !saveOptions.template) router.push("/processes");
+          else if (saveOptions.template && !saveOptions.process) router.push("/templates");
+          else router.push("/processes");
+        }, 2000);
       }
     } catch (err) {
       const errorMessage =
@@ -226,6 +294,7 @@ export default function NewProcessPage() {
       console.error("Unexpected error:", err);
     } finally {
       setIsSubmitting(false);
+      setSaveProgress(false);
     }
   };
 
@@ -1198,6 +1267,120 @@ export default function NewProcessPage() {
           </div>
         )}
       </div>
+
+      {/* SAVE OPTIONS MODAL */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/55 backdrop-blur-sm shadow-inner" onClick={() => !saveProgress && setShowSaveModal(false)}></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-white font-bold text-xl">Save Options</h2>
+                <p className="text-amber-100 text-sm mt-1">How would you like to save this configuration?</p>
+              </div>
+              <button 
+                onClick={() => !saveProgress && setShowSaveModal(false)}
+                className="text-white/75 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+                disabled={saveProgress}
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {error && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Option 1: Active Process */}
+                <label className={`block relative border-2 rounded-xl p-5 cursor-pointer transition-all ${saveOptions.process ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}>
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input 
+                        type="checkbox" 
+                        className="h-5 w-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500" 
+                        checked={saveOptions.process}
+                        onChange={(e) => setSaveOptions({...saveOptions, process: e.target.checked})}
+                        disabled={saveProgress}
+                      />
+                    </div>
+                    <div className="ml-4">
+                      <div className="flex items-center gap-2">
+                        <FiLayers className={`h-5 w-5 ${saveOptions.process ? 'text-amber-600' : 'text-gray-400'}`} />
+                        <span className={`block text-lg font-semibold ${saveOptions.process ? 'text-amber-900' : 'text-gray-900'}`}>
+                          Save as Active Process
+                        </span>
+                      </div>
+                      <span className="block text-sm text-gray-500 mt-1">
+                        Creates a live process instance. Assigned members will be notified, and progress tracking will begin immediately.
+                      </span>
+                    </div>
+                  </div>
+                </label>
+
+                {/* Option 2: Reusable Template */}
+                <label className={`block relative border-2 rounded-xl p-5 cursor-pointer transition-all ${saveOptions.template ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}>
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input 
+                        type="checkbox" 
+                        className="h-5 w-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500" 
+                        checked={saveOptions.template}
+                        onChange={(e) => setSaveOptions({...saveOptions, template: e.target.checked})}
+                        disabled={saveProgress}
+                      />
+                    </div>
+                    <div className="ml-4">
+                      <div className="flex items-center gap-2">
+                        <FiCopy className={`h-5 w-5 ${saveOptions.template ? 'text-amber-600' : 'text-gray-400'}`} />
+                        <span className={`block text-lg font-semibold ${saveOptions.template ? 'text-amber-900' : 'text-gray-900'}`}>
+                          Save as Reusable Template
+                        </span>
+                      </div>
+                      <span className="block text-sm text-gray-500 mt-1">
+                        Adds this framework to the Templates library. It won't notify assignees, but serves as a blueprint for future processes.
+                      </span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  disabled={saveProgress}
+                  className="flex-1 py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={executeSave}
+                  disabled={saveProgress || (!saveOptions.process && !saveOptions.template)}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium hover:from-amber-600 hover:to-amber-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:shadow-none"
+                >
+                  {saveProgress ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <FiCheck className="h-5 w-5" />
+                      Confirm & Create
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

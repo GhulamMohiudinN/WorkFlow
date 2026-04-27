@@ -38,6 +38,7 @@ export default function ProcessesPage() {
   const [showTags, setShowTags] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [processes, setProcesses] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
 
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -57,30 +58,32 @@ export default function ProcessesPage() {
         const result = await processAPI.getWorkspaceProcesses(filters);
 
         if (result.success) {
+          // Store server-side analytics (total, active, avgCompletion, totalSteps)
+          if (result.analytics) setAnalytics(result.analytics);
+
           // Transform API data to match UI expectations
           const transformedData = (result.data || []).map((process, index) => ({
             id: process._id ?? process.id ?? String(index + 1),
             rawId: process._id || process.id,
             name: process.name,
-            description: process.description,
+            description: process.description || "",
             category: process.category,
             steps: (process.steps || []).length,
             status: process.status || "draft",
             visibility: process.visibility || "private",
             lastUpdated: formatDate(process.updatedAt),
             completion: calculateCompletion(process),
-            assignedTo:
-              process.assignedTo?.map((a) => a.name).join(", ") || "Unassigned",
+            // DB field is `assignees` (array of populated user objects)
+            assignees: process.assignees || [],
             color: getCategoryColor(process.category),
             settings: process.settings,
-            createdBy: process.createdBy || { name: "System Admin" }, // Fallback if missing
+            createdBy: process.createdBy || null,
           }));
 
           setProcesses(transformedData);
         } else {
           setError(result.error || "Failed to load processes");
           console.error("Error fetching processes:", result.error);
-          // Keep showing empty state or previous data
           setProcesses([]);
         }
       } catch (err) {
@@ -123,11 +126,12 @@ export default function ProcessesPage() {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  // Helper function to calculate completion percentage
+  // Calculate completion from completed steps vs total steps
   const calculateCompletion = (process) => {
-    // If API provides completion, use it; otherwise calculate from steps
-    if (process.completion) return process.completion;
-    return Math.floor(Math.random() * 100); // Fallback for demo
+    const allSteps = process.steps || [];
+    if (!allSteps.length) return 0;
+    const done = allSteps.filter((s) => s.status === "completed").length;
+    return Math.round((done / allSteps.length) * 100);
   };
 
   // Helper function to get category color
@@ -223,16 +227,14 @@ export default function ProcessesPage() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — driven by server analytics when available */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">
-                Total Processes
-              </p>
+              <p className="text-sm font-medium text-gray-600">Total Processes</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {processes.length}
+                {analytics?.total ?? processes.length}
               </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
@@ -244,11 +246,9 @@ export default function ProcessesPage() {
         <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">
-                Active Processes
-              </p>
+              <p className="text-sm font-medium text-gray-600">Active Processes</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {processes.filter((p) => p.status === "active").length}
+                {analytics?.active ?? processes.filter((p) => p.status === "inprogress").length}
               </p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
@@ -260,15 +260,15 @@ export default function ProcessesPage() {
         <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">
-                Avg Completion
-              </p>
+              <p className="text-sm font-medium text-gray-600">Avg Completion</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {Math.round(
-                  processes.reduce((acc, p) => acc + p.completion, 0) /
-                    processes.length,
-                )}
-                %
+                {analytics?.avgCompletion ?? (
+                  processes.length
+                    ? Math.round(
+                        processes.reduce((acc, p) => acc + p.completion, 0) / processes.length,
+                      )
+                    : 0
+                )}%
               </p>
             </div>
             <div className="bg-amber-100 p-3 rounded-lg">
@@ -282,7 +282,7 @@ export default function ProcessesPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Total Steps</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {processes.reduce((acc, p) => acc + p.steps, 0)}
+                {analytics?.totalSteps ?? processes.reduce((acc, p) => acc + p.steps, 0)}
               </p>
             </div>
             <div className="bg-purple-100 p-3 rounded-lg">
@@ -375,9 +375,9 @@ export default function ProcessesPage() {
                     <FiClock className="h-4 w-4 mr-2" />
                     <span>Updated: {process.lastUpdated}</span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FiUsers className="h-4 w-4 mr-2" />
-                    <span>Assigned to: {process.assignedTo}</span>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <FiUsers className="h-4 w-4 flex-shrink-0" />
+                    <AssigneeStack assignees={process.assignees} />
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <FiLayers className="h-4 w-4 mr-2" />
@@ -512,8 +512,8 @@ export default function ProcessesPage() {
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {process.steps} steps
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {process.assignedTo}
+                    <td className="px-6 py-4">
+                      <AssigneeStack assignees={process.assignees} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="w-32">
@@ -677,5 +677,41 @@ function Avatar({ name = "", size = "h-8 w-8", textCls = "text-[10px]" }) {
   );
 }
 
-// Helper component for missing icon
+/**
+ * Shows an avatar stack for assignment display.
+ * Handles: populated objects ({ _id, name }), raw strings (IDs), and empty arrays.
+ */
+function AssigneeStack({ assignees = [], max = 3 }) {
+  if (!assignees.length) {
+    return <span className="text-gray-400 italic text-xs">Unassigned</span>;
+  }
+
+  const visible = assignees.slice(0, max);
+  const overflow = assignees.length - max;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex -space-x-2">
+        {visible.map((a, i) => {
+          const name = typeof a === "string" ? "?" : a.name || a.email || "?";
+          return (
+            <div key={a._id || a.id || i} title={name}>
+              <Avatar name={name} size="h-6 w-6" textCls="text-[9px]" />
+            </div>
+          );
+        })}
+      </div>
+      {overflow > 0 && (
+        <span className="text-xs text-gray-500 font-medium">+{overflow}</span>
+      )}
+      {assignees.length === 1 && (
+        <span className="text-xs text-gray-600 truncate max-w-[120px]">
+          {typeof assignees[0] === "string"
+            ? assignees[0]
+            : assignees[0].name || assignees[0].email}
+        </span>
+      )}
+    </div>
+  );
+}
 
