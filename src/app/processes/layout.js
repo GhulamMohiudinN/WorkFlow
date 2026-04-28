@@ -84,9 +84,9 @@ export default function ProcessesLayout({ children }) {
       },
       {
         name: "Users",
-        href: "/dashboard/users",
+        href: "/users",
         icon: FiUsers,
-        current: pathname.startsWith("/dashboard/users"),
+        current: pathname.startsWith("/users"),
       },
       {
         name: "Templates",
