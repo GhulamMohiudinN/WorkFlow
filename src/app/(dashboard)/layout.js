@@ -20,6 +20,7 @@ import {
   FiHelpCircle,
   FiGlobe,
   FiCopy,
+  FiZap,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import Link from "next/link";
@@ -37,6 +38,59 @@ export default function DashboardLayout({ children }) {
 
   const router = useRouter();
   const pathname = usePathname();
+
+  const navigation = useMemo(() => {
+    const items = [
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: FiHome,
+        current: pathname.includes("/dashboard"),
+      },
+      {
+        name: "Company",
+        href: "/company",
+        icon: FaBuilding,
+        current: pathname.includes("/company"),
+      },
+      {
+        name: "Processes",
+        href: "/processes",
+        icon: FiLayers,
+        current: pathname.includes("/processes"),
+      },
+      {
+        name: "Templates",
+        href: "/templates",
+        icon: FiCopy,
+        current: pathname.includes("/templates"),
+      },
+      {
+        name: "Process Builder",
+        href: "/builder",
+        icon: FiZap,
+        current: pathname.includes("/builder"),
+      },
+    ];
+
+    if (role === "admin" || role === "superadmin" || role === "editor") {
+      items.push({
+        name: "Users",
+        href: "/users",
+        icon: FiUsers,
+        current: pathname.includes("/users"),
+      });
+    }
+
+    items.push({
+      name: "Settings",
+      href: "/settings",
+      icon: FiSettings,
+      current: pathname.includes("/settings"),
+    });
+
+    return items;
+  }, [pathname, role]);
 
   // Single initialization effect - runs once on client mount
   useEffect(() => {
@@ -68,7 +122,7 @@ export default function DashboardLayout({ children }) {
       return;
     }
 
-    if (role !== "admin") {
+    if (role !== "admin" && role !== "editor") {
       router.push("/users/dashboardUsers");
       return;
     }
@@ -85,6 +139,7 @@ export default function DashboardLayout({ children }) {
       socket.emit("register", userId);
     }
   }, [isMounted]);
+
   // Render only when mounted on client
   if (!isMounted || loading) {
     return null; // Prevent hydration mismatch and show loading
@@ -102,46 +157,6 @@ export default function DashboardLayout({ children }) {
     setWorkspace(null);
     router.push("/login");
   };
-
-  const navigation = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: FiHome,
-      current: pathname.includes("/dashboard"),
-    },
-    {
-      name: "Company",
-      href: "/company",
-      icon: FaBuilding,
-      current: pathname.includes("/company"),
-    },
-    {
-      name: "Processes",
-      href: "/processes",
-      icon: FiLayers,
-      current: pathname.includes("/processes"),
-    },
-    {
-      name: "Templates",
-      href: "/templates",
-      icon: FiCopy,
-      current: pathname.includes("/templates"),
-    },
-    {
-      name: "Users",
-      href: "/users",
-      icon: FiUsers,
-      current: pathname.includes("/users"),
-    },
-    // { name: 'Analytics', href: '/dashboard/analytics', icon: FiBarChart2, current: pathname === '/dashboard/analytics' },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: FiSettings,
-      current: pathname.includes("/settings"),
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-linear-to-b from-amber-50 to-white">

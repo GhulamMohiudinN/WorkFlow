@@ -37,8 +37,8 @@ export default function UserLayout({ children }) {
       router.push("/login");
       return;
     }
-    if (storedRole !== "member") {
-      // Admins are not allowed in member area
+    if (storedRole === "admin" || storedRole === "superadmin" || storedRole === "editor") {
+      // High-level roles should use the main dashboard route
       router.push("/dashboard");
     }
   }, [isBrowser, storedUserString, storedRole, router]);
@@ -47,7 +47,7 @@ export default function UserLayout({ children }) {
     return null;
   }
 
-  if (!storedUserString || !storedRole || storedRole !== "member") {
+  if (!storedUserString || !storedRole || storedRole === "admin" || storedRole === "superadmin" || storedRole === "editor") {
     return null;
   }
 

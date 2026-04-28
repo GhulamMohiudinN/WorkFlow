@@ -43,9 +43,30 @@ export default function ProcessesPage() {
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  const canEdit = userRole === "admin" || userRole === "editor";
 
   useEffect(() => {
-    const fetchProcesses = async () => {
+    let resolvedRole = "viewer";
+    if (typeof window !== "undefined") {
+      try {
+        const rawRole = localStorage.getItem("role")?.toLowerCase();
+        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
+        
+        if (rawRole && rawRole !== "member") {
+          resolvedRole = rawRole;
+        } else if (userObj && userObj.role && userObj.role.toLowerCase() !== "member") {
+          resolvedRole = userObj.role.toLowerCase();
+          localStorage.setItem("role", resolvedRole);
+        } else if (userObj?.userType?.toLowerCase() === "admin") {
+          resolvedRole = "admin";
+        }
+      } catch (err) {}
+      setUserRole(resolvedRole);
+    }
+
+    const fetchProcesses = async (currentRole) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -54,40 +75,60 @@ export default function ProcessesPage() {
         if (search) filters.search = search;
         if (filter !== "all") filters.status = filter;
 
-        // Use workspace processes endpoint
-        const result = await processAPI.getWorkspaceProcesses(filters);
+        let result;
+        
+        // Senior-Level Role-First Fetching Strategy
+        if (currentRole === "admin" || currentRole === "superadmin") {
+          // Admins always see everything
+          result = await processAPI.getWorkspaceProcesses(filters);
+        } else if (currentRole === "editor") {
+          // Editors try to see everything, but fallback gracefully if the workspace is locked
+          result = await processAPI.getWorkspaceProcesses(filters);
+          if (!result.success && (result.status === 403 || result.status === 401)) {
+            result = await processAPI.getAssignedProcesses(filters);
+          }
+        } else {
+          // Viewers/Members only ever see their assigned processes
+          result = await processAPI.getAssignedProcesses(filters);
+        }
 
         if (result.success) {
           // Store server-side analytics (total, active, avgCompletion, totalSteps)
           if (result.analytics) setAnalytics(result.analytics);
+          else if (result.count != null) setAnalytics(prev => ({ ...prev, total: result.count }));
 
-          // Transform API data to match UI expectations
-          const transformedData = (result.data || []).map((process, index) => ({
-            id: process._id ?? process.id ?? String(index + 1),
-            rawId: process._id || process.id,
-            name: process.name,
-            description: process.description || "",
-            category: process.category,
-            steps: (process.steps || []).length,
-            status: process.status || "draft",
-            visibility: process.visibility || "private",
-            lastUpdated: formatDate(process.updatedAt),
-            completion: calculateCompletion(process),
-            // DB field is `assignees` (array of populated user objects)
-            assignees: process.assignees || [],
-            color: getCategoryColor(process.category),
-            settings: process.settings,
-            createdBy: process.createdBy || null,
-          }));
+          const transformedData = (result.data || []).map((process, index) => {
+            const completion = calculateCompletion(process);
+            let displayStatus = process.status || "draft";
+            
+            if (completion === 100) {
+              displayStatus = "completed";
+            }
+            
+            return {
+              id: process._id ?? process.id ?? String(index + 1),
+              rawId: process._id || process.id,
+              name: process.name,
+              description: process.description || "",
+              category: process.category,
+              steps: (process.steps || []).length,
+              status: displayStatus,
+              visibility: process.visibility || "private",
+              lastUpdated: formatDate(process.updatedAt),
+              completion: completion,
+              assignees: process.assignees || [],
+              color: getCategoryColor(process.category),
+              settings: process.settings,
+              createdBy: process.createdBy || null,
+            };
+          });
 
           setProcesses(transformedData);
         } else {
           setError(result.error || "Failed to load processes");
-          console.error("Error fetching processes:", result.error);
           setProcesses([]);
         }
       } catch (err) {
-        console.error("Unexpected error fetching processes:", err);
         setError("An unexpected error occurred. Please refresh the page.");
         setProcesses([]);
       } finally {
@@ -95,20 +136,30 @@ export default function ProcessesPage() {
       }
     };
 
-    fetchProcesses();
+    fetchProcesses(resolvedRole);
   }, [filter, search]);
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "active":
-        return "bg-green-100 text-green-800";
+      case "inprogress":
+        return "bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center shadow-sm";
+      case "completed":
+        return "bg-emerald-50 text-emerald-700 font-medium border border-emerald-200 inline-flex items-center shadow-sm";
       case "draft":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center shadow-sm";
       case "archived":
-        return "bg-gray-100 text-gray-800";
+        return "bg-slate-50 text-slate-700 border border-slate-200 inline-flex items-center shadow-sm";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-50 text-gray-700 border border-gray-200 inline-flex items-center shadow-sm";
     }
+  };
+
+  const getStatusIcon = (status) => {
+    if (status?.toLowerCase() === "completed") {
+      return <FiCheck className="mr-1 h-3 w-3" />;
+    }
+    return null;
   };
 
   // Helper function to format date
@@ -167,7 +218,7 @@ export default function ProcessesPage() {
   const filteredProcesses = processes
     .filter((process) => {
       if (filter === "all") return true;
-      return process.status === filter;
+      return process.status?.toLowerCase() === filter.toLowerCase();
     })
     .filter(
       (process) =>
@@ -213,17 +264,21 @@ export default function ProcessesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Processes</h1>
           <p className="text-gray-600 mt-2">
-            Create and manage your workflow processes
+            {userRole === "admin" 
+              ? "Create and manage your workspace processes" 
+              : "View and edit workflows you have access to"}
           </p>
         </div>
         <div className="mt-4 md:mt-0">
-          <Link
-            href="/processes/new"
-            className="inline-flex items-center px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 shadow-lg shadow-amber-500/25"
-          >
-            <FiPlus className="mr-2 h-5 w-5" />
-            Create New Process
-          </Link>
+          {canEdit && (
+            <Link
+              href="/processes/new"
+              className="inline-flex items-center px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 shadow-lg shadow-amber-500/25"
+            >
+              <FiPlus className="mr-2 h-5 w-5" />
+              Create New Process
+            </Link>
+          )}
         </div>
       </div>
 
@@ -318,6 +373,7 @@ export default function ProcessesPage() {
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="draft">Draft</option>
+                <option value="completed">Completed</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
@@ -359,8 +415,9 @@ export default function ProcessesPage() {
                     <FiLayers className="h-6 w-6 text-white" />
                   </div>
                   <span
-                    className={`text-xs px-3 py-1 rounded-full ${getStatusBadge(process.status)}`}
+                    className={`text-xs px-3 py-1 rounded-full capitalize ${getStatusBadge(process.status)}`}
                   >
+                    {getStatusIcon(process.status)}
                     {process.status}
                   </span>
                 </div>
@@ -415,36 +472,52 @@ export default function ProcessesPage() {
                         <Link
                           href={`/processes/${process.rawId || process.id}`}
                           className="p-2 text-gray-400 hover:text-amber-600"
+                          title="View Process"
                         >
                           <FiEye className="h-5 w-5" />
                         </Link>
-                        <Link
-                          href={`/processes/${process.rawId || process.id}/edit`}
-                          className="p-2 text-gray-400 hover:text-blue-600"
-                        >
-                          <FiEdit2 className="h-5 w-5" />
-                        </Link>
+                        {canEdit && (
+                          <Link
+                            href={`/processes/${process.rawId || process.id}/edit`}
+                            className="p-2 text-gray-400 hover:text-blue-600"
+                            title="Edit Process"
+                          >
+                            <FiEdit2 className="h-5 w-5" />
+                          </Link>
+                        )}
                       </>
                     ) : (
                       <span className="text-xs text-red-500">ID missing</span>
                     )}
-                    <button
-                      onClick={() => setDeleteConfirm(process)}
-                      className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                      disabled={isDeleting}
-                      title="Delete process"
-                    >
-                      <FiTrash2 className="h-5 w-5" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => setDeleteConfirm(process)}
+                        className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                        disabled={isDeleting}
+                        title="Delete process"
+                      >
+                        <FiTrash2 className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                   {process.rawId || process.id ? (
-                    <Link
-                      href={`/processes/${process.rawId || process.id}/edit`}
-                      className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
-                    >
-                      Edit
-                      <FiChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
+                    canEdit ? (
+                      <Link
+                        href={`/processes/${process.rawId || process.id}/edit`}
+                        className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
+                      >
+                        Edit
+                        <FiChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/processes/${process.rawId || process.id}`}
+                        className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
+                      >
+                        View
+                        <FiChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    )
                   ) : (
                     <span className="text-xs text-red-500">ID missing</span>
                   )}
@@ -504,8 +577,9 @@ export default function ProcessesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`text-xs px-3 py-1 rounded-full ${getStatusBadge(process.status)}`}
+                        className={`text-xs px-3 py-1 rounded-full capitalize ${getStatusBadge(process.status)}`}
                       >
+                        {getStatusIcon(process.status)}
                         {process.status}
                       </span>
                     </td>
@@ -533,19 +607,31 @@ export default function ProcessesPage() {
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
                         <Link
-                          href={`/processes/${process.rawId || process.id}/edit`}
-                          className="p-2 text-gray-400 hover:text-blue-600"
+                          href={`/processes/${process.rawId || process.id}`}
+                          className="p-2 text-gray-400 hover:text-amber-600"
+                          title="View Process"
                         >
-                          <FiEdit2 className="h-5 w-5" />
+                          <FiEye className="h-5 w-5" />
                         </Link>
-                        <button
-                          onClick={() => setDeleteConfirm(process)}
-                          className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                          disabled={isDeleting}
-                          title="Delete process"
-                        >
-                          <FiTrash2 className="h-5 w-5" />
-                        </button>
+                        {canEdit && (
+                          <>
+                            <Link
+                              href={`/processes/${process.rawId || process.id}/edit`}
+                              className="p-2 text-gray-400 hover:text-blue-600"
+                              title="Edit Process"
+                            >
+                              <FiEdit2 className="h-5 w-5" />
+                            </Link>
+                            <button
+                              onClick={() => setDeleteConfirm(process)}
+                              className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                              disabled={isDeleting}
+                              title="Delete process"
+                            >
+                              <FiTrash2 className="h-5 w-5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -567,15 +653,17 @@ export default function ProcessesPage() {
             No processes found
           </h3>
           <p className="text-gray-600 mb-6">
-            Create your first process to get started
+            {canEdit ? "Create your first process to get started" : "No processes are currently available."}
           </p>
-          <Link
-            href="/processes/new"
-            className="inline-flex items-center px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-          >
-            <FiPlus className="mr-2 h-5 w-5" />
-            Create New Process
-          </Link>
+          {canEdit && (
+            <Link
+              href="/processes/new"
+              className="inline-flex items-center px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+            >
+              <FiPlus className="mr-2 h-5 w-5" />
+              Create New Process
+            </Link>
+          )}
         </div>
       )}
       {/* Delete Confirmation Modal */}

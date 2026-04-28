@@ -20,6 +20,7 @@ import {
   FiHelpCircle,
   FiGlobe,
   FiCopy,
+  FiZap,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import Link from "next/link";
@@ -37,18 +38,81 @@ export default function ProcessesLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const navigation = useMemo(() => {
+    const items = [
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: FiHome,
+        current: pathname === "/dashboard",
+      },
+      {
+        name: "Processes",
+        href: "/processes",
+        icon: FiLayers,
+        current: pathname.startsWith("/processes"),
+      },
+    ];
+
+    if (role === "admin" || role === "superadmin" || role === "editor") {
+      items.push({
+        name: "Users",
+        href: "/users",
+        icon: FiUsers,
+        current: pathname.startsWith("/users"),
+      });
+    }
+
+    items.push(
+      {
+        name: "Templates",
+        href: "/templates",
+        icon: FiCopy,
+        current: pathname.startsWith("/templates"),
+      },
+      {
+        name: "Process Builder",
+        href: "/builder",
+        icon: FiZap,
+        current: pathname === "/builder",
+      },
+      {
+        name: "Company",
+        href: "/dashboard/company",
+        icon: FaBuilding,
+        current: pathname.startsWith("/dashboard/company"),
+      },
+      {
+        name: "Settings",
+        href: "/dashboard/settings",
+        icon: FiSettings,
+        current: pathname.startsWith("/dashboard/settings"),
+      }
+    );
+
+    return items;
+  }, [pathname, role]);
+
   // Single initialization effect - runs once on client mount
   useEffect(() => {
     setIsMounted(true);
 
     try {
       const storedUser = localStorage.getItem("user");
-      const storedRole = localStorage.getItem("role");
+      let storedRole = localStorage.getItem("role");
       const storedWorkspace = localStorage.getItem("workspace");
 
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+
+      // Auto-heal 'member' role to actual workspace role if it exists (e.g. editor, viewer)
+      if (storedRole?.toLowerCase() === "member" && parsedUser?.role) {
+         storedRole = parsedUser.role.toLowerCase();
+         localStorage.setItem("role", storedRole);
+      }
+
       // Set state from localStorage
-      setUser(storedUser ? JSON.parse(storedUser) : null);
-      setRole(storedRole);
+      setUser(parsedUser);
+      setRole(storedRole?.toLowerCase());
       setWorkspace(storedWorkspace ? JSON.parse(storedWorkspace) : null);
     } catch (err) {
       console.error("Error loading user data from storage:", err);
@@ -67,48 +131,6 @@ export default function ProcessesLayout({ children }) {
       socket.emit("register", userId);
     }
   }, [isMounted]);
-
-  const navigation = useMemo(
-    () => [
-      {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: FiHome,
-        current: pathname === "/dashboard",
-      },
-      {
-        name: "Processes",
-        href: "/processes",
-        icon: FiLayers,
-        current: pathname.startsWith("/processes"),
-      },
-      {
-        name: "Users",
-        href: "/users",
-        icon: FiUsers,
-        current: pathname.startsWith("/users"),
-      },
-      {
-        name: "Templates",
-        href: "/templates",
-        icon: FiCopy,
-        current: pathname.startsWith("/templates"),
-      },
-      {
-        name: "Company",
-        href: "/dashboard/company",
-        icon: FaBuilding,
-        current: pathname.startsWith("/dashboard/company"),
-      },
-      {
-        name: "Settings",
-        href: "/dashboard/settings",
-        icon: FiSettings,
-        current: pathname.startsWith("/dashboard/settings"),
-      },
-    ],
-    [pathname],
-  );
 
   // Render only when mounted on client
   if (!isMounted) {

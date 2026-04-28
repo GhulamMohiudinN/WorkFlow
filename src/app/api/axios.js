@@ -50,11 +50,13 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const ms = Date.now() - (originalRequest?.metadata?.startTime ?? Date.now());
-    console.error(
-      `[API ✖]  ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
-      `→ ${error.response?.status ?? "ERR"} (${ms}ms)`,
-      error.response?.data?.message || error.message,
-    );
+    if (error.response?.status !== 403) {
+      console.error(
+        `[API ✖]  ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
+        `→ ${error.response?.status ?? "ERR"} (${ms}ms)`,
+        error.response?.data?.message || error.message,
+      );
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

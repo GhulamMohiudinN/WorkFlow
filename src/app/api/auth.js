@@ -18,9 +18,9 @@ export const authAPI = {
         },
       ),
     );
-    // Ensure role comes from API user userType (member/admin) or fallback from data.role
-    const userType = data.user?.userType || data.role || "admin";
-    localStorage.setItem("role", userType);
+    // Ensure role comes from API workspace assignment (role) or fallback to global userType
+    const userRole = data.user?.role || data.role || data.user?.userType || "admin";
+    localStorage.setItem("role", userRole.toLowerCase());
     localStorage.setItem(
       "workspace",
       JSON.stringify(
@@ -121,7 +121,7 @@ export const authAPI = {
 
     if (data?.user) {
       localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("role", data.user.userType || "admin");
+      localStorage.setItem("role", (data.user?.role || data.role || data.user.userType || "admin").toLowerCase());
       localStorage.setItem("userId", data.user.id);
     }
 

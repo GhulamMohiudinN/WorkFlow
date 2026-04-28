@@ -386,7 +386,7 @@ function transformFormDataToAPI(formData) {
       status: step.status || "draft",
       order: step.order,
       sequenceNo: step.sequenceNo || step.order || 0,
-      assignee: step.assignee || "",
+      assignee: typeof step.assignee === "string" ? step.assignee : step.assignee?._id || step.assignee?.id || "",
     })),
   };
 }

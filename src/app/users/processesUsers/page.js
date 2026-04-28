@@ -12,6 +12,7 @@ import {
   FiAlertCircle,
   FiRefreshCw,
   FiX,
+  FiEdit2,
 } from "react-icons/fi";
 import { processAPI } from "../../api/processAPI";
 
@@ -91,6 +92,8 @@ export default function UserProcessesPage() {
     return () => clearTimeout(searchTimer.current);
   }, [search]);
 
+  const [userRole, setUserRole] = useState("viewer");
+
   const loadProcesses = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -110,6 +113,12 @@ export default function UserProcessesPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      let role = localStorage.getItem("role")?.toLowerCase() || "viewer";
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      if (u.role) role = u.role.toLowerCase();
+      setUserRole(role);
+    }
     loadProcesses();
   }, [loadProcesses]);
 
@@ -151,14 +160,26 @@ export default function UserProcessesPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Processes</h1>
           <p className="text-gray-600 mt-1">Workflows you are assigned to</p>
         </div>
-        <button
-          onClick={loadProcesses}
-          disabled={isLoading}
-          className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:border-amber-400 hover:text-amber-600 transition-colors text-sm font-medium disabled:opacity-50"
-        >
-          <FiRefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <button
+            onClick={loadProcesses}
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:border-amber-400 hover:text-amber-600 transition-colors text-sm font-medium disabled:opacity-50"
+          >
+            <FiRefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+          
+          {(userRole === "admin" || userRole === "editor") && (
+            <Link
+              href="/processes/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-lg shadow-amber-500/25 transition-colors text-sm font-medium"
+            >
+              <FiLayers className="h-4 w-4" />
+              Create Process
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Search */}
@@ -184,12 +205,14 @@ export default function UserProcessesPage() {
       </div>
 
       {/* View-only notice */}
-      <div className="bg-blue-50 rounded-xl p-4 mb-6 flex items-center gap-3 border border-blue-100">
-        <FiEye className="h-5 w-5 text-blue-600 flex-shrink-0" />
-        <p className="text-sm text-blue-800">
-          You have view access. To create or edit processes, please contact your workspace admin.
-        </p>
-      </div>
+      {userRole === "viewer" && (
+        <div className="bg-blue-50 rounded-xl p-4 mb-6 flex items-center gap-3 border border-blue-100">
+          <FiEye className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <p className="text-sm text-blue-800">
+            You have view access. To create or edit processes, please contact your workspace admin.
+          </p>
+        </div>
+      )}
 
       {/* Grid */}
       {isLoading ? (
@@ -238,8 +261,8 @@ export default function UserProcessesPage() {
                     <div className={`${processColor(idx)} h-12 w-12 rounded-lg flex items-center justify-center`}>
                       <FiLayers className="h-6 w-6 text-white" />
                     </div>
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColor(process.status)}`}>
-                      {process.status || "active"}
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColor(progress === 100 ? "completed" : (process.status || "active"))}`}>
+                      {progress === 100 ? "completed" : (process.status || "active")}
                     </span>
                   </div>
 
@@ -277,13 +300,24 @@ export default function UserProcessesPage() {
                     </div>
                   </div>
 
-                  <Link
-                    href={`/users/processesUsers/${pid}`}
-                    className="flex items-center justify-between pt-4 border-t border-gray-100 text-amber-600 hover:text-amber-700 font-medium text-sm group-hover:translate-x-0.5 transition-transform"
-                  >
-                    <span>View Details</span>
-                    <FiChevronRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <Link
+                      href={`/users/processesUsers/${pid}`}
+                      className="inline-flex items-center text-amber-600 hover:text-amber-700 font-medium text-sm hover:translate-x-0.5 transition-transform"
+                    >
+                      <FiEye className="mr-1.5 h-4 w-4" />
+                      <span>View Details</span>
+                    </Link>
+                    {(userRole === "admin" || userRole === "editor") && (
+                      <Link
+                        href={`/processes/${pid}/edit`}
+                        className="inline-flex items-center px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg font-medium text-xs transition-colors"
+                      >
+                        <FiEdit2 className="mr-1.5 h-3.5 w-3.5" />
+                        Edit
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             );
